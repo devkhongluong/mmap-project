@@ -490,6 +490,16 @@ export default function AuthComponent({
               ))}
             </div>
 
+            {/* Server Error Display */}
+            {serverError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" className="mt-0.5 shrink-0">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p className="text-red-400 text-sm leading-tight">{serverError}</p>
+              </div>
+            )}
+
             {/* ── LOGIN FORM ── */}
             {mode === 'login' && (
               <form className="form-login flex flex-col gap-4" onSubmit={handleLogin} noValidate>

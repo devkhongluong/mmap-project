@@ -1,0 +1,181 @@
+TÀI LIỆU THIẾT KẾ DATABASE: HỆ THỐNG QUẢN LÝ HỌC TẬP (LMS) & TO-DO
+
+Hệ thống được chia làm 3 nhóm bảng chính:
+
+Master Tables (Bảng thực thể gốc): Lưu trữ dữ liệu cấu trúc lõi.
+
+Pivot Tables (Bảng phụ N-N): Giải quyết các mối quan hệ Nhiều-Nhiều.
+
+Transaction Tables (Bảng giao dịch): Lưu vết hoạt động hàng ngày của User.
+
+PHẦN 1: MASTER TABLES (THỰC THỂ GỐC)
+
+1. Bảng users (Tài khoản người dùng)
+
+id (BIGINT) - Primary Key (PK)
+
+username (VARCHAR 50) - Unique
+
+email (VARCHAR 100) - Unique
+
+password_hash (VARCHAR 255)
+
+created_at (TIMESTAMP) - Mặc định NOW()
+
+updated_at (TIMESTAMP) - Tự động cập nhật khi đổi thông tin
+
+2. Bảng skills (Danh mục Kỹ năng / Huy hiệu)
+
+id (INT) - PK
+
+skill_name (VARCHAR 100) - Unique (VD: Java Core, Spring Boot, IELTS)
+
+icon_url (VARCHAR 255) - Nullable (Link ảnh hoặc Emoji)
+
+3. Bảng learning_maps (Tổng quan Lộ trình)
+
+(Đã loại bỏ target_skill_id ở đây để chuyển sang bảng phụ N-N)
+
+id (INT) - PK
+
+title (VARCHAR 255) - Tên lộ trình
+
+description (TEXT) - Nullable (Mô tả chi tiết mục tiêu của lộ trình)
+
+total_days (INT) - Tổng số ngày của map
+
+created_at (TIMESTAMP)
+
+4. Bảng map_days (Chi tiết ngày học)
+
+(Quan hệ 1-N: 1 Map có nhiều Day)
+
+id (BIGINT) - PK
+
+map_id (INT) - Foreign Key (FK) -> learning_maps(id)
+
+phase_name (VARCHAR 150) - Tên giai đoạn
+
+week_name (VARCHAR 150) - Tên tuần
+
+day_index (INT) - Thứ tự ngày (1, 2, 3...)
+
+day_title (VARCHAR 255) - Tiêu đề ngày (Dùng để vẽ Tree Map)
+
+5. Bảng map_day_checklists (Ý chính cần học)
+
+(Quan hệ 1-N: 1 Day có nhiều Checklist)
+
+id (BIGINT) - PK
+
+map_day_id (BIGINT) - FK -> map_days(id)
+
+checkpoint_content (VARCHAR 500) - Nội dung ngắn gọn cần đạt
+
+PHẦN 2: PIVOT TABLES (BẢNG PHỤ GIẢI QUYẾT QUAN HỆ N-N)
+
+Đây là các bảng sinh ra để xử lý tình huống "Nhiều người dùng có thể tương tác với nhiều map/ngày/checklist" và ngược lại.
+
+6. Bảng map_skills (N-N giữa Lộ trình và Kỹ năng)
+
+Giải quyết: 1 Lộ trình cấp nhiều kỹ năng, 1 Kỹ năng có thể đạt được qua nhiều Lộ trình.
+
+map_id (INT) - FK, PK (Composite Key)
+
+skill_id (INT) - FK, PK (Composite Key)
+
+7. Bảng user_maps (N-N giữa User và Lộ trình)
+
+Giải quyết: Trạng thái User đang học những Map nào.
+
+id (BIGINT) - PK
+
+user_id (BIGINT) - FK -> users(id)
+
+map_id (INT) - FK -> learning_maps(id)
+
+status (ENUM) - IN_PROGRESS, COMPLETED
+
+last_accessed_at (TIMESTAMP) - Dùng để load map mặc định khi user login
+
+started_at (TIMESTAMP) - Mặc định NOW() khi user bấm tham gia Map
+
+completed_at (TIMESTAMP) - Nullable (Cập nhật khi user hoàn thành ngày cuối cùng)
+
+8. Bảng user_skills (N-N giữa User và Kỹ năng)
+
+Giải quyết: Các kỹ năng User đã mở khóa hiển thị trên Profile.
+
+id (BIGINT) - PK
+
+user_id (BIGINT) - FK -> users(id)
+
+skill_id (INT) - FK -> skills(id)
+
+unlocked_at (TIMESTAMP) - Mặc định NOW() khi được cấp
+
+9. Bảng user_day_progress (N-N giữa User và Ngày học - Sinh Tree Map)
+
+Giải quyết: Tiến độ hoàn thành từng điểm node (ngày) trên Tree Map của mỗi user.
+
+id (BIGINT) - PK
+
+user_id (BIGINT) - FK -> users(id)
+
+map_day_id (BIGINT) - FK -> map_days(id)
+
+status (ENUM) - LOCKED, UNLOCKED (Đang học), COMPLETED (Hoàn tất)
+
+completed_at (TIMESTAMP) - Cập nhật khi bấm lưu Note thành công
+
+10. Bảng user_checklist_progress (N-N giữa User và Checklists)
+
+Giải quyết: Trạng thái tick các ô vuông checklist của mỗi user.
+
+id (BIGINT) - PK
+
+user_id (BIGINT) - FK -> users(id)
+
+checklist_id (BIGINT) - FK -> map_day_checklists(id)
+
+is_checked (BOOLEAN) - Default FALSE
+
+updated_at (TIMESTAMP) - Lưu thời gian user tick/untick
+
+PHẦN 3: TRANSACTION TABLES (DỮ LIỆU TƯƠNG TÁC ĐỘC LẬP)
+
+11. Bảng daily_notes (Ghi chú bài học sau AI Check)
+
+Lưu vết nội dung text tóm tắt của User tại 1 ngày cụ thể.
+
+id (BIGINT) - PK
+
+user_id (BIGINT) - FK -> users(id)
+
+map_day_id (BIGINT) - FK -> map_days(id)
+
+note_content (TEXT)
+
+created_at (TIMESTAMP)
+
+updated_at (TIMESTAMP) - Nếu user sửa lại note sau này
+
+12. Bảng daily_todos (To-do List linh hoạt)
+
+Hoạt động độc lập, không gắn với Map học (Context Global).
+
+id (BIGINT) - PK
+
+user_id (BIGINT) - FK -> users(id)
+
+task_content (VARCHAR 255)
+
+target_date (DATE) - Lọc hiển thị theo Ngày
+
+due_time (TIME) - Mốc thời gian cụ thể (Dùng order by Timeline)
+
+status (ENUM) - PENDING, COMPLETED
+
+created_at (TIMESTAMP)
+
+updated_at (TIMESTAMP) - Lưu thời điểm sửa text hoặc tick hoàn thành

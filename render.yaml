@@ -1,0 +1,23 @@
+services:
+  # ── Backend: Spring Boot ────────────────────────────────────────────
+  - type: web
+    name: mmap-backend
+    runtime: java
+    rootDir: backend
+    buildCommand: mvn clean package -DskipTests -f pom.xml
+    startCommand: java -Xmx256m -jar target/mmap-backend-1.0.0.jar
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # Điền thủ công trên Render dashboard
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true  # Render tự tạo random secret
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false

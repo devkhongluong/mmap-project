@@ -1,0 +1,72 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: mmap-backend
+
+  # ══════════════════════════════════════════════════════════
+  # DATABASE — đọc từ Environment Variables (an toàn cho CI/CD)
+  # Khi chạy local: tạo file .env hoặc set trong IDE Run Config
+  # ══════════════════════════════════════════════════════════
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/mmap_db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5          # Phù hợp với gói Free Neon/Supabase
+      minimum-idle: 2
+      connection-timeout: 30000     # 30s timeout
+
+  # ══════════════════════════════════════════════════════════
+  # JPA / HIBERNATE
+  # ══════════════════════════════════════════════════════════
+  jpa:
+    hibernate:
+      ddl-auto: validate            # Production: validate schema (đừng dùng create/update!)
+    show-sql: false                 # Đặt true khi debug
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        default_schema: public
+
+  # ══════════════════════════════════════════════════════════
+  # FILE UPLOAD (Excel import)
+  # ══════════════════════════════════════════════════════════
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# ══════════════════════════════════════════════════════════
+# JWT CONFIGURATION
+# ══════════════════════════════════════════════════════════
+jwt:
+  secret: ${JWT_SECRET:mySecretKeyForMmapApplicationThatIsAtLeast256BitsLong!!}
+  expiration-ms: 86400000           # 24 giờ (milliseconds)
+  refresh-expiration-ms: 604800000  # 7 ngày
+
+# ══════════════════════════════════════════════════════════
+# GEMINI AI (optional — có thể gọi từ FE trực tiếp)
+# ══════════════════════════════════════════════════════════
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  api-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+
+# ══════════════════════════════════════════════════════════
+# LOGGING
+# ══════════════════════════════════════════════════════════
+logging:
+  level:
+    root: INFO
+    com.mmap: DEBUG
+    org.springframework.security: WARN
+
+# ══════════════════════════════════════════════════════════
+# CORS — cho phép Frontend (Vercel) gọi API
+# ══════════════════════════════════════════════════════════
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://my-mmap.vercel.app}

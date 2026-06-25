@@ -1,0 +1,77 @@
+TÀI LIỆU PHÂN TÍCH VÀ ĐỀ XUẤT TECH STACK (TIÊU CHÍ FREE TIER)
+
+Dựa trên quy trình hoạt động của hệ thống Quản lý Học tập (LMS) & To-do, ứng dụng của bạn cần xử lý các bài toán cốt lõi sau:
+
+Giao diện động (Dynamic UI) với nhiều trạng thái (Popup, Checklists, Tree Map zoom/drag).
+
+Xử lý File Excel (Parsing dữ liệu).
+
+Database quan hệ chuẩn hóa 3NF (12 bảng).
+
+Tích hợp AI tạo text.
+
+Để tối ưu chi phí (0đ) mà vẫn đảm bảo tính chuyên nghiệp của một dự án thực tế để ghi vào CV, dưới đây là bộ Tech Stack đề xuất:
+
+1. FRONTEND (Giao diện người dùng)
+
+Phần này đảm nhận việc hiển thị 3 cột, đồng hồ Pomodoro, vẽ Tree Map và xử lý các Popup.
+
+Framework/Thư viện: React.js (khởi tạo bằng Vite). Nhanh, nhẹ, cộng đồng hỗ trợ lớn. Phù hợp hoàn toàn với đoạn code UI tôi đã demo cho bạn.
+
+Styling: Tailwind CSS. Giúp code giao diện cực nhanh, chuẩn thiết kế tối giản (Minimalist).
+
+State Management: Zustand. Để quản lý trạng thái Đa lộ trình (Multi-Map Context) thay vì dùng Redux quá cồng kềnh cho sinh viên.
+
+Vẽ Tree Map: Dùng SVG thuần (như demo) hoặc thư viện React Flow (chuyên vẽ sơ đồ Node siêu đẹp, có sẵn tính năng zoom, kéo thả miễn phí).
+
+Hosting (Miễn phí): Vercel hoặc Netlify.
+
+Ưu điểm: Triển khai cực dễ chỉ bằng cách liên kết với GitHub, miễn phí vĩnh viễn cho dự án cá nhân (Hobby plan), có sẵn SSL (https).
+
+2. BACKEND (Máy chủ & Logic nghiệp vụ)
+
+Vì theo lộ trình bạn đang hướng tới Java Backend Developer, đây là cơ hội tuyệt vời để dùng chính hệ thống này làm Project thực tế cho CV.
+
+Framework: Java + Spring Boot 3. Tuyệt vời để xây dựng RESTful API và quản lý cấu trúc 12 bảng Database thông qua Spring Data JPA.
+
+Đọc/Parse Excel: Thư viện Apache POI. Thư viện chuẩn mực nhất của Java để thao tác với file Excel.
+
+Bảo mật: Spring Security + JWT. Xử lý luồng Đăng nhập, Đăng ký và phân quyền người dùng.
+
+Hosting (Miễn phí): Render.com (Gói Free Web Service) hoặc Railway.app (Gói Hobby).
+
+Lưu ý gói Free: Ở Render, nếu sau 15 phút không ai truy cập, Server sẽ tự "ngủ" (Spin down). Khi bạn vào lại, nó sẽ mất khoảng 30-50 giây để "thức dậy". Đối với project sinh viên, điều này hoàn toàn có thể chấp nhận được.
+
+3. DATABASE (Cơ sở dữ liệu)
+
+Hệ thống có 12 bảng với nhiều quan hệ N-N phức tạp, do đó bắt buộc phải dùng Cơ sở dữ liệu quan hệ (RDBMS).
+
+Hệ quản trị: PostgreSQL. Đang là xu hướng của thế giới, vượt trội hơn MySQL ở khả năng xử lý JSON và mở rộng. Rất phù hợp với Spring Boot.
+
+Database Cloud Hosting (Miễn phí): * Lựa chọn 1: Neon.tech (Khuyên dùng). Đây là Serverless Postgres, giao diện cực kỳ hiện đại, gói Free cho phép lưu trữ 500MB (thoải mái cho text và checklist) và không bị xóa sau 90 ngày.
+
+Lựa chọn 2: Supabase. Cung cấp DB Postgres cực xịn miễn phí 500MB lưu trữ, tốc độ rất cao.
+
+4. AI INTEGRATION (Tích hợp Trí tuệ nhân tạo)
+
+Khâu AI nhận xét Note và nhắc nhở bài học.
+
+Mô hình: Google Gemini API (Mô hình gemini-1.5-flash).
+
+Lý do chọn: Google cung cấp gói Free Tier cực kỳ hào phóng cho Gemini (15 requests/phút, 1500 requests/ngày). Hoàn toàn miễn phí, tốc độ phản hồi cực nhanh, xử lý tiếng Việt xuất sắc.
+
+Tích hợp: Bạn chỉ cần vào Google AI Studio tạo 1 mã API Key miễn phí, sau đó cài thư viện google-genai hoặc gọi HTTP Request trực tiếp từ Spring Boot backend.
+
+TỔNG KẾT MÔ HÌNH TRIỂN KHAI (DEPLOYMENT PIPELINE)
+
+Luồng triển khai toàn bộ hệ thống lên Internet với chi phí 0 đồng:
+
+Code: Đẩy toàn bộ code Frontend và Backend lên 2 kho chứa (Repository) riêng biệt trên GitHub (Miễn phí).
+
+Database: Tạo Database trên Neon.tech -> Lấy chuỗi kết nối (Database URL).
+
+Backend: Vào Render.com, tạo Web Service, trỏ vào repo Backend trên GitHub. Nạp Database URL và Gemini API Key vào biến môi trường (Environment Variables). Render sẽ tự build và cho bạn 1 đường link API (Ví dụ: https://my-lms-api.onrender.com).
+
+Frontend: Vào Vercel.com, tạo Project, trỏ vào repo Frontend. Cấu hình biến môi trường VITE_API_BASE_URL bằng link API của Render. Vercel sẽ tự build và cho bạn link web chính thức (Ví dụ: https://my-lms.vercel.app).
+
+Tất cả các công cụ trên đều là tiêu chuẩn công nghiệp (Industry Standard). Làm chủ được bộ Tech Stack này, CV của bạn sẽ cực kỳ ấn tượng trong mắt nhà tuyển dụng!

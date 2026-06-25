@@ -1,0 +1,101 @@
+QUY TRÌNH & LUỒNG HOẠT ĐỘNG HỆ THỐNG (WORKFLOW CHECKLIST)
+
+Dưới đây là danh sách kiểm tra (checklist) mô tả chi tiết luồng hoạt động của hệ thống từ góc nhìn của Người dùng (User) và Hệ thống (System), được chia theo các giai đoạn.
+
+1. Giai đoạn Khởi tạo (Import Lộ trình)
+
+[ ] Hành động: Người dùng bấm nút "+ Thêm Lộ Trình" và upload file Excel (đã cấu trúc dạng Flat Table).
+
+[ ] Xử lý: Hệ thống đọc file, bóc tách dữ liệu và lưu vào các bảng Master (learning_maps, map_days, map_day_checklists, skills).
+
+[ ] Kết quả: Bản ghi mới được tạo trong user_maps với trạng thái IN_PROGRESS. Lộ trình mới xuất hiện trong Dropdown chọn Map ở Header.
+
+2. Giai đoạn Đăng nhập & Tải Giao diện (Khởi đầu ngày mới)
+
+[ ] Hành động: Người dùng đăng nhập vào trang chủ (Dashboard).
+
+[ ] Xử lý:
+
+Truy vấn user_maps lấy Map có last_accessed_at gần nhất làm Ngữ cảnh hiện tại (Active Map).
+
+Tải danh sách Checklist của bài học ngày hôm nay (Cột giữa).
+
+Truy vấn daily_todos lấy các công việc có target_date là hôm nay, sắp xếp theo due_time (Cột trái dưới).
+
+Truy vấn tiến độ user_day_progress để tính % và vẽ Tree Map (Cột phải).
+
+Tải Note của ngày hôm trước hiển thị vào Widget Note (Cột trái trên).
+
+3. Giai đoạn Học tập & Hoàn thành Checklists (Focus Zone)
+
+[ ] Hành động: Người dùng bắt đầu bấm đồng hồ Pomodoro và học. Học xong ý nào, tích vào ô checkbox tương ứng ở cột giữa.
+
+[ ] Xử lý: Mỗi lần tích, hệ thống ngầm update trạng thái is_checked vào bảng user_checklist_progress.
+
+[ ] Ràng buộc: Nút "Hoàn thành & Nhập Note" luôn ở trạng thái Disabled (Khóa mờ).
+
+[ ] Mở khóa: Khi 100% checkbox của ngày hôm đó được tích -> Nút "Hoàn thành & Nhập Note" sáng lên và cho phép bấm.
+
+4. Giai đoạn Kiểm định Kiến thức (AI Note Verification)
+
+[ ] Hành động: Bấm nút "Hoàn thành & Nhập Note" -> Popup nhập liệu hiện ra.
+
+[ ] Chống gian lận: Thẻ <textarea> được chặn sự kiện onPaste. Người dùng bắt buộc phải tự gõ tóm tắt bài học.
+
+[ ] Gửi AI: Người dùng gõ xong và bấm "Gửi AI Xác Nhận".
+
+[ ] Xử lý AI:
+
+Nút gửi chuyển sang trạng thái Loading.
+
+Hệ thống gửi nội dung Note + nội dung Checklists lên API của mô hình AI.
+
+AI trả về lời nhận xét (khen ngợi + nhắc nhở bổ sung). Dữ liệu này CHỈ hiển thị trên UI, không lưu vào Database.
+
+[ ] Hoàn tất: Người dùng đọc góp ý AI, sửa lại note nếu muốn, và bấm "Hoàn Tất & Lưu Note".
+
+[ ] Xử lý Database:
+
+Insert text vào bảng daily_notes.
+
+Update bảng user_day_progress sang COMPLETED và cập nhật completed_at.
+
+5. Giai đoạn Cập nhật Tiến độ & Phần thưởng (Rewards)
+
+[ ] Hiệu ứng Tree Map: Ngay sau khi lưu Note, Tree Map ở cột phải lập tức chạy animation: Nút (Node) của ngày hôm nay sáng lên, nối line xuống Node tiếp theo. % tiến độ tăng lên.
+
+[ ] Mở khóa Kỹ năng (Nếu là ngày cuối):
+
+Hệ thống check: Số ngày COMPLETED == total_days của Map.
+
+Nếu đúng: Update user_maps thành COMPLETED. Insert bản ghi vào user_skills.
+
+Hiển thị thông báo chúc mừng hoàn thành lộ trình. Huy hiệu mới sẽ hiện màu sáng trên Popup Profile.
+
+6. Giai đoạn Quản lý Công việc Linh hoạt (Global To-Do)
+
+[ ] Hành động: Trong ngày, người dùng nhớ ra việc cần làm -> Gõ vào thanh Todo, chọn Giờ (Timeline) và bấm Enter.
+
+[ ] Đặc tính: To-do list là Global. Dù người dùng có đổi qua Map khác (chuyển từ Java sang Tiếng Anh), danh sách To-do hôm nay vẫn giữ nguyên không đổi.
+
+[ ] Lưu vết: Khi tích hoàn thành Todo, gạch ngang chữ và update DB (status = COMPLETED, updated_at = NOW()).
+
+7. Giai đoạn Chuyển đổi Ngữ cảnh (Multi-Map Switching)
+
+[ ] Hành động: Người dùng bấm Dropdown ở Header chọn Lộ trình khác (Ví dụ: Đổi sang học IELTS).
+
+[ ] Xử lý:
+
+Update last_accessed_at của Map mới.
+
+Tải lại toàn bộ Cột Giữa (Checklist bài IELTS), Widget Note (Note cũ IELTS) và Tree Map (Tiến độ IELTS).
+
+To-do list (Cột trái dưới) GIỮ NGUYÊN.
+
+8. Giai đoạn Tra cứu (Lịch sử)
+
+[ ] Xem lại Note: Bấm vào Widget Note -> Mở Popup Lịch sử Note dạng Grid. Xem lại tất cả các ngày cũ (Read-only).
+
+[ ] Xem lại To-do: Bấm vào Widget To-do -> Mở Popup Quản lý To-do. Ở dưới có danh sách các ngày cũ thống kê số việc đã làm (Read-only).
+
+[ ] Xem Profile: Bấm vào Avatar góc phải trên -> Mở Popup xem ngày tham gia và dàn Huy hiệu kỹ năng đã mở khóa.

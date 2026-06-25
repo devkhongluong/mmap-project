@@ -2,10 +2,8 @@ services:
   # ── Backend: Spring Boot ────────────────────────────────────────────
   - type: web
     name: mmap-backend
-    runtime: java
+    env: docker
     rootDir: backend
-    buildCommand: mvn clean package -DskipTests -f pom.xml
-    startCommand: java -Xmx256m -jar target/mmap-backend-1.0.0.jar
     plan: free
     healthCheckPath: /actuator/health
     envVars:

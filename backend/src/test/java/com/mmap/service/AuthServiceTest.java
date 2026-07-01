@@ -28,17 +28,10 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class AuthServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private JwtUtil jwtUtil;
-
-    @Mock
-    private AuthenticationManager authManager;
+    @Mock private UserRepository userRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private JwtUtil jwtUtil;
+    @Mock private AuthenticationManager authManager;
 
     @InjectMocks
     private AuthService authService;
@@ -62,8 +55,9 @@ public class AuthServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals("jwt_token", response.token());
-        assertEquals("test@test.com", response.user().email());
+        assertEquals("jwt_token", response.accessToken());
+        assertEquals("test@test.com", response.email());
+        assertEquals("testuser", response.username());
         verify(userRepository).save(any(User.class));
     }
 
@@ -80,6 +74,19 @@ public class AuthServiceTest {
     }
 
     @Test
+    void register_UsernameAlreadyExists_ThrowsException() {
+        // Arrange
+        RegisterRequest req = new RegisterRequest("test@test.com", "testuser", "password123");
+        when(userRepository.existsByEmail(req.email())).thenReturn(false);
+        when(userRepository.existsByUsername(req.username())).thenReturn(true);
+
+        // Act & Assert
+        BusinessException ex = assertThrows(BusinessException.class, () -> authService.register(req));
+        assertTrue(ex.getMessage().contains("Username đã tồn tại"));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void login_Success() {
         // Arrange
         LoginRequest req = new LoginRequest("test@test.com", "password123");
@@ -92,8 +99,8 @@ public class AuthServiceTest {
 
         // Assert
         assertNotNull(response);
-        assertEquals("jwt_token", response.token());
-        assertEquals("testuser", response.user().username());
+        assertEquals("jwt_token", response.accessToken());
+        assertEquals("testuser", response.username());
         verify(authManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
     }
 

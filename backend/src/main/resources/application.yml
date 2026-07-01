@@ -50,11 +50,10 @@ jwt:
   refresh-expiration-ms: 604800000  # 7 ngày
 
 # ══════════════════════════════════════════════════════════
-# GEMINI AI (optional — có thể gọi từ FE trực tiếp)
+# GROQ AI (free, OpenAI-compatible — thay thế Gemini)
 # ══════════════════════════════════════════════════════════
-gemini:
-  api-key: ${GEMINI_API_KEY:}
-  api-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent
+groq:
+  api-key: ${GROQ_API_KEY:}
 
 # ══════════════════════════════════════════════════════════
 # LOGGING

@@ -175,8 +175,10 @@ export default function DashboardComponent(props: DashboardProps) {
     fetchNoteHistory,
   } = props;
 
-  // ---------- Time ----------
+  // ---------- Time & Theme ----------
   const [now, setNow] = useState(new Date());
+  const [themeMode, setThemeMode] = useState<'auto' | 'morning' | 'noon' | 'afternoon' | 'night'>('auto');
+
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
@@ -185,6 +187,42 @@ export default function DashboardComponent(props: DashboardProps) {
     d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const fmtDate = (d: Date) =>
     d.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  // Compute active theme
+  const currentTheme = React.useMemo(() => {
+    if (themeMode !== 'auto') return themeMode;
+    const hour = now.getHours();
+    if (hour >= 6 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 15) return 'noon';
+    if (hour >= 15 && hour < 18) return 'afternoon';
+    return 'night';
+  }, [themeMode, now]);
+
+  const cycleTheme = () => {
+    const modes: typeof themeMode[] = ['auto', 'morning', 'noon', 'afternoon', 'night'];
+    setThemeMode(prev => {
+      const nextIdx = (modes.indexOf(prev) + 1) % modes.length;
+      return modes[nextIdx];
+    });
+  };
+
+  const getThemeBg = () => {
+    switch (currentTheme) {
+      case 'morning': return '/backgrounds/morning.png';
+      case 'noon': return '/backgrounds/noon.png';
+      case 'afternoon': return '/backgrounds/afternoon.png';
+      case 'night': return '/backgrounds/night.png';
+      default: return '/backgrounds/morning.png';
+    }
+  };
+  const getThemeIcon = (mode: string) => {
+    if (mode === 'auto') return '✨';
+    if (mode === 'morning') return '🌅';
+    if (mode === 'noon') return '☀️';
+    if (mode === 'afternoon') return '🌇';
+    if (mode === 'night') return '🌙';
+    return '✨';
+  };
 
   // ---------- Mobile Navigation ----------
   const [mobileTab, setMobileTab] = useState<'home' | 'map' | 'tools' | 'notes'>('home');
@@ -705,7 +743,7 @@ export default function DashboardComponent(props: DashboardProps) {
               ) : noteHistory.map((note) => (
                 <div
                   key={note.noteId}
-                  className="bg-white border border-gray-100 rounded-xl p-3.5 hover:border-blue-200 hover:shadow-sm transition-all"
+                  className="bg-white/70 backdrop-blur-md border border-white/50 rounded-xl p-3.5 hover:border-blue-200 hover:shadow-sm transition-all"
                 >
                   <div className="text-xs font-bold text-blue-500 mb-1.5">Day {note.dayIndex}</div>
                   <div className="text-xs font-semibold text-gray-600 mb-1 line-clamp-1">{note.dayTitle}</div>
@@ -821,45 +859,58 @@ export default function DashboardComponent(props: DashboardProps) {
         </div>
       )}
 
-      <div className="min-h-screen bg-[#F0F2F5] flex flex-col">
+      <div 
+        className="min-h-screen flex flex-col transition-all duration-700 bg-cover bg-center bg-no-repeat bg-fixed"
+        style={{ backgroundImage: `url(${getThemeBg()})` }}
+      >
 
         {/* ── HEADER ─────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+        <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-xl border-b border-white/20 shadow-sm">
           <div className="max-w-7xl mx-auto px-6 py-3 flex justify-between items-center gap-4">
 
             {/* Logo + Map Selector */}
             <div className="flex items-center gap-5 min-w-0">
-              <div className="text-xl font-black tracking-widest text-gray-200 select-none flex-shrink-0">
-                <span className="text-blue-500">M</span>MAP
+              <div className="text-xl font-black tracking-widest text-gray-800 select-none flex-shrink-0 drop-shadow-md">
+                <span className="text-blue-600">M</span>MAP
               </div>
 
-              <nav className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5 min-w-0 overflow-x-auto">
-                {isLoadingMaps ? (
-                  <div className="px-4 py-1.5 text-sm text-gray-400">Đang tải...</div>
-                ) : maps.map(m => (
+              <div className="flex items-center gap-2">
+                <nav className="flex items-center bg-white/40 backdrop-blur-md rounded-xl p-1 gap-0.5 min-w-0 overflow-x-auto shadow-sm border border-white/40">
+                  {isLoadingMaps ? (
+                    <div className="px-4 py-1.5 text-sm text-gray-400">Đang tải...</div>
+                  ) : maps.map(m => (
+                    <button
+                      key={m.userMapId}
+                      onClick={() => handleSwitchMap(m)}
+                      disabled={mapSwitching}
+                      title={m.title}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
+                        activeMapId === m.mapId
+                          ? 'bg-white/80 text-blue-600 shadow-sm'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-white/50'
+                      }`}
+                    >
+                      {m.title.length > 20 ? m.title.substring(0, 20) + '…' : m.title}
+                    </button>
+                  ))}
+                  <div className="w-px h-5 bg-gray-300 mx-1 flex-shrink-0" />
                   <button
-                    key={m.userMapId}
-                    onClick={() => handleSwitchMap(m)}
-                    disabled={mapSwitching}
-                    title={m.title}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
-                      activeMapId === m.mapId
-                        ? 'bg-white text-blue-600 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
-                    }`}
+                    onClick={() => setShowImportModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-gray-700 bg-white/40 hover:bg-white/60 rounded-lg whitespace-nowrap flex-shrink-0 transition-colors border border-white/40"
                   >
-                    {m.title.length > 20 ? m.title.substring(0, 20) + '…' : m.title}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Thêm Mới
                   </button>
-                ))}
-                <div className="w-px h-5 bg-gray-300 mx-1 flex-shrink-0" />
+                </nav>
+
                 <button
-                  onClick={() => setShowImportModal(true)}
-                  className="px-3 py-1.5 rounded-lg text-sm font-semibold text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-all flex items-center gap-1 flex-shrink-0"
+                  onClick={cycleTheme}
+                  title={`Giao diện: ${themeMode}`}
+                  className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/40 hover:bg-white/60 border border-white/40 shadow-sm transition-all"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-                  Thêm Mới
+                  <span className="text-lg leading-none">{getThemeIcon(themeMode)}</span>
                 </button>
-              </nav>
+              </div>
             </div>
 
             {/* Streak & Profile Button */}
@@ -911,7 +962,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 {/* Note Widget */}
                 <div
                   onClick={handleOpenNoteHistory}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-purple-200 transition-all group"
+                  className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-purple-200 transition-all group"
                   style={{ minHeight: 148 }}
                 >
                   <div className="flex justify-between items-center mb-3">
@@ -938,7 +989,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 {/* Todo Widget */}
                 <div
                   onClick={() => setActiveModal('todo_manage')}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group flex-grow"
+                  className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group flex-grow"
                 >
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
@@ -996,7 +1047,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 </div>
 
                 {/* ── Pomodoro Timer ── */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
                   <div className="flex items-center justify-between gap-4">
 
                     {/* Phase + Time Info */}
@@ -1080,7 +1131,7 @@ export default function DashboardComponent(props: DashboardProps) {
 
                 {/* ── Checklist Card ── */}
                 <div
-                  className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex-grow flex flex-col relative overflow-hidden transition-opacity duration-300 ${mapSwitching ? 'opacity-40 pointer-events-none' : 'fade-in'}`}
+                  className={`bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-6 flex-grow flex flex-col relative overflow-hidden transition-opacity duration-300 ${mapSwitching ? 'opacity-40 pointer-events-none' : 'fade-in'}`}
                 >
                   {/* Top accent bar */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-2xl" />
@@ -1193,7 +1244,7 @@ export default function DashboardComponent(props: DashboardProps) {
               <aside className={`lg:col-span-3 flex-col gap-5 ${mobileTab === 'tools' ? 'flex' : 'hidden lg:flex'}`}>
                 <div
                   onClick={() => setActiveModal('tree_map')}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
+                  className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
                 >
                   {/* Bottom progress bar */}
                   <div
@@ -1293,7 +1344,7 @@ export default function DashboardComponent(props: DashboardProps) {
 
         {/* ── MOBILE BOTTOM NAVIGATION ─────────────────────────────────── */}
         {maps.length > 0 && (
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-center justify-around pb-safe pt-1 px-2 z-40 shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/70 backdrop-blur-md border-t border-white/50 flex items-center justify-around pb-safe pt-1 px-2 z-40 shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
             {[
               { id: 'home', label: 'Hôm nay', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
               { id: 'notes', label: 'Ghi chú', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
@@ -1336,7 +1387,7 @@ export default function DashboardComponent(props: DashboardProps) {
             onClick={closeModal}
           >
             <div
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col relative fade-in"
+              className="bg-white/90 backdrop-blur-2xl rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col relative fade-in"
               style={{ maxHeight: '88vh' }}
               onClick={e => e.stopPropagation()}
             >

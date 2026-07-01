@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -131,9 +132,11 @@ public class ExcelImportService {
                 .build();
         userMapRepository.save(userMap);
 
-        // Unlock ngày học đầu tiên (Day 1 = UNLOCKED)
-        MapDay firstDay = mapDayRepository.findByMapIdAndDayIndex(map.getId(), 1)
-                .orElseThrow();
+        // Unlock ngày học ĐẦU TIÊN (dayIndex nhỏ nhất trong file)
+        List<MapDay> allDays = mapDayRepository.findByMapIdOrderByDayIndexAsc(map.getId());
+        if (allDays.isEmpty()) throw new BusinessException("Không có ngày học nào được tạo");
+
+        MapDay firstDay = allDays.get(0);   // Ngày có dayIndex nhỏ nhất
         UserDayProgress firstProgress = UserDayProgress.builder()
                 .user(user)
                 .mapDay(firstDay)
@@ -142,12 +145,10 @@ public class ExcelImportService {
         dayProgressRepository.save(firstProgress);
 
         // Tạo LOCKED entries cho tất cả ngày còn lại
-        List<MapDay> allDays = mapDayRepository.findByMapIdOrderByDayIndexAsc(map.getId());
-        for (MapDay day : allDays) {
-            if (day.getDayIndex() == 1) continue;   // Bỏ qua Day 1 đã tạo
+        for (int i = 1; i < allDays.size(); i++) {
             UserDayProgress lockedProgress = UserDayProgress.builder()
                     .user(user)
-                    .mapDay(day)
+                    .mapDay(allDays.get(i))
                     .status(DayProgressStatus.LOCKED)
                     .build();
             dayProgressRepository.save(lockedProgress);
@@ -168,21 +169,24 @@ public class ExcelImportService {
             Sheet sheet = workbook.getSheet("Lộ trình");
             if (sheet == null) sheet = workbook.getSheetAt(0);
 
-            boolean firstRow = true;
             for (Row row : sheet) {
-                if (firstRow) { firstRow = false; continue; }  // Bỏ qua header
-
                 // Bỏ qua hàng trống
                 Cell phaseCell = row.getCell(COL_PHASE);
                 if (phaseCell == null || getCellString(phaseCell).isBlank()) continue;
 
+                // Phát hiện dòng header: cột C không phải số → bỏ qua
+                int dayIndex = getCellInt(row.getCell(COL_DAY_IDX));
+                if (dayIndex <= 0) {
+                    log.info("Bỏ qua hàng {} (header hoặc dayIndex không hợp lệ)", row.getRowNum() + 1);
+                    continue;
+                }
+
                 String phaseName = getCellString(row.getCell(COL_PHASE));
                 String weekName  = getCellString(row.getCell(COL_WEEK));
-                int dayIndex     = getCellInt(row.getCell(COL_DAY_IDX));
                 String dayTitle  = getCellString(row.getCell(COL_TITLE));
 
-                if (dayIndex <= 0 || dayTitle.isBlank()) {
-                    log.warn("Bỏ qua hàng {} — dayIndex hoặc title trống", row.getRowNum() + 1);
+                if (dayTitle.isBlank()) {
+                    log.warn("Bỏ qua hàng {} — title trống", row.getRowNum() + 1);
                     continue;
                 }
 
@@ -197,22 +201,43 @@ public class ExcelImportService {
                 result.add(new MapDayData(phaseName, weekName, dayIndex, dayTitle, checkpoints));
             }
         }
+        // Sắp xếp theo dayIndex để đảm bảo thứ tự đúng
+        result.sort(Comparator.comparingInt(MapDayData::dayIndex));
         return result;
     }
 
+    /**
+     * Lấy giá trị String của cell, xử lý cả FORMULA cells (Google Sheets).
+     */
     private String getCellString(Cell cell) {
         if (cell == null) return "";
-        return switch (cell.getCellType()) {
+        CellType type = cell.getCellType();
+        // Xử lý Formula cells (từ Google Sheets hoặc Excel có công thức)
+        if (type == CellType.FORMULA) {
+            type = cell.getCachedFormulaResultType();
+        }
+        return switch (type) {
             case STRING  -> cell.getStringCellValue().trim();
-            case NUMERIC -> String.valueOf((int) cell.getNumericCellValue());
+            case NUMERIC -> {
+                double v = cell.getNumericCellValue();
+                // Nếu là số nguyên, không hiện .0
+                yield v == Math.floor(v) ? String.valueOf((long) v) : String.valueOf(v);
+            }
             case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
             default      -> "";
         };
     }
 
+    /**
+     * Lấy giá trị int của cell, xử lý cả FORMULA cells (Google Sheets).
+     */
     private int getCellInt(Cell cell) {
         if (cell == null) return 0;
-        return switch (cell.getCellType()) {
+        CellType type = cell.getCellType();
+        if (type == CellType.FORMULA) {
+            type = cell.getCachedFormulaResultType();
+        }
+        return switch (type) {
             case NUMERIC -> (int) cell.getNumericCellValue();
             case STRING  -> {
                 try { yield Integer.parseInt(cell.getStringCellValue().trim()); }

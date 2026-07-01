@@ -4,13 +4,15 @@ import type { Todo } from '@/api/todos';
 import type { NoteHistory } from '@/api/notes';
 import { ImportMapModal } from '@/components/ImportMapModal';
 import { reviewNoteWithAi } from '@/api/ai';
+import type { UserProfile } from '@/api/profile';
 
 // =====================================================================
 // PROPS INTERFACE — Nhận dữ liệu thực từ useDashboard() hook
 // =====================================================================
 interface DashboardProps {
-  // Auth
+  // Auth & Profile
   user: { email: string; username: string } | null;
+  profile: UserProfile | null;
   logout: () => void;
 
   // Maps
@@ -146,7 +148,7 @@ function EmptyMapState() {
 // =====================================================================
 export default function DashboardComponent(props: DashboardProps) {
   const {
-    user, logout,
+    user, profile, logout,
     maps, activeMapId, activeMap, isLoadingMaps,
     currentDay, isLoadingDay,
     todos, isLoadingTodos,
@@ -167,6 +169,9 @@ export default function DashboardComponent(props: DashboardProps) {
     d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const fmtDate = (d: Date) =>
     d.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  // ---------- Mobile Navigation ----------
+  const [mobileTab, setMobileTab] = useState<'home' | 'map' | 'tools' | 'notes'>('home');
 
   // ---------- Import modal ----------
   const [showImportModal, setShowImportModal] = useState(false);
@@ -704,19 +709,35 @@ export default function DashboardComponent(props: DashboardProps) {
             </div>
 
             {/* Stats */}
-            <div className="w-full grid grid-cols-3 gap-3">
+            <div className="w-full grid grid-cols-4 gap-2">
               {[
-                { label: 'Lộ trình', value: String(maps.length), icon: '🗺️' },
-                { label: 'Ngày hoàn thành', value: String(maps.reduce((s, m) => s + m.daysCompleted, 0)), icon: '✅' },
-                { label: 'Pomodoro hôm nay', value: String(pomo.sessions), icon: '🍅' },
+                { label: 'Lộ trình', value: String(profile?.totalMapsEnrolled ?? maps.length), icon: '🗺️' },
+                { label: 'Ngày học', value: String(profile?.totalDaysCompleted ?? maps.reduce((s, m) => s + m.daysCompleted, 0)), icon: '✅' },
+                { label: 'Chuỗi', value: `${profile?.currentStreak ?? 0}🔥`, icon: '⚡' },
+                { label: 'Cà chua', value: String(pomo.sessions), icon: '🍅' },
               ].map((s, i) => (
-                <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
-                  <div className="text-xl mb-0.5">{s.icon}</div>
-                  <div className="text-xl font-black text-gray-800">{s.value}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{s.label}</div>
+                <div key={i} className="bg-gray-50 border border-gray-100 rounded-xl p-2.5 text-center">
+                  <div className="text-lg mb-0.5">{s.icon}</div>
+                  <div className="text-lg font-black text-gray-800">{s.value}</div>
+                  <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{s.label}</div>
                 </div>
               ))}
             </div>
+
+            {/* Skills */}
+            {profile?.skills && profile.skills.length > 0 && (
+              <div className="w-full">
+                <div className="text-xs font-bold text-gray-500 uppercase mb-3">Kỹ năng đạt được</div>
+                <div className="flex flex-wrap gap-2">
+                  {profile.skills.map(skill => (
+                    <div key={skill.skillId} className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-semibold" title={`Mở khóa: ${new Date(skill.unlockedAt).toLocaleDateString('vi-VN')}`}>
+                      <span>{skill.iconUrl}</span>
+                      {skill.skillName}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Logout */}
             <button
@@ -812,26 +833,38 @@ export default function DashboardComponent(props: DashboardProps) {
               </nav>
             </div>
 
-            {/* Profile Button */}
-            <button
-              onClick={() => setActiveModal('profile')}
-              className="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-xl transition-all flex-shrink-0"
-            >
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-bold text-gray-700 leading-none">{user?.username ?? 'Người dùng'}</div>
-                <div className="text-xs text-gray-400 mt-0.5">{maps.length} lộ trình</div>
-              </div>
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                </svg>
-              </div>
-            </button>
+            {/* Streak & Profile Button */}
+            <div className="flex items-center gap-3">
+              {profile && profile.currentStreak > 0 && (
+                <div className="hidden sm:flex items-center gap-1.5 bg-orange-50 border border-orange-100 text-orange-600 px-3 py-1.5 rounded-xl font-black text-sm shadow-sm" title="Chuỗi học tập">
+                  🔥 {profile.currentStreak}
+                </div>
+              )}
+              <button
+                onClick={() => setActiveModal('profile')}
+                className="flex items-center gap-3 hover:bg-gray-100 px-3 py-2 rounded-xl transition-all flex-shrink-0"
+              >
+                <div className="text-right hidden sm:block">
+                  <div className="text-sm font-bold text-gray-700 leading-none">{user?.username ?? 'Người dùng'}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{maps.length} lộ trình</div>
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md flex-shrink-0 relative">
+                  {profile && profile.currentStreak > 0 && (
+                    <div className="sm:hidden absolute -top-1.5 -right-1.5 text-xs bg-orange-500 text-white font-bold px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm">
+                      🔥{profile.currentStreak}
+                    </div>
+                  )}
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  </svg>
+                </div>
+              </button>
+            </div>
           </div>
         </header>
 
         {/* ── MAIN GRID ──────────────────────────────────────────────── */}
-        <main className="flex-grow max-w-7xl mx-auto w-full px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5 mb-20 lg:mb-0">
 
           {/* Empty state — chưa có map */}
           {!isLoadingMaps && maps.length === 0 && (
@@ -844,7 +877,7 @@ export default function DashboardComponent(props: DashboardProps) {
           {maps.length > 0 && (
             <>
               {/* ═══════ CỘT TRÁI ═══════ */}
-              <aside className="lg:col-span-3 flex flex-col gap-5">
+              <aside className={`lg:col-span-3 flex-col gap-5 ${mobileTab === 'notes' ? 'flex' : 'hidden lg:flex'}`}>
 
                 {/* Note Widget */}
                 <div
@@ -923,7 +956,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </aside>
 
               {/* ═══════ CỘT GIỮA ═══════ */}
-              <section className="lg:col-span-6 flex flex-col gap-5">
+              <section className={`lg:col-span-6 flex-col gap-5 ${mobileTab === 'home' ? 'flex' : 'hidden lg:flex'}`}>
 
                 {/* Clock */}
                 <div className="text-center py-1">
@@ -1110,7 +1143,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </section>
 
               {/* ═══════ CỘT PHẢI ═══════ */}
-              <aside className="lg:col-span-3">
+              <aside className={`lg:col-span-3 flex-col gap-5 ${mobileTab === 'tools' ? 'flex' : 'hidden lg:flex'}`}>
                 <div
                   onClick={() => setActiveModal('tree_map')}
                   className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 h-full flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
@@ -1197,6 +1230,36 @@ export default function DashboardComponent(props: DashboardProps) {
             </>
           )}
         </main>
+
+        {/* ── MOBILE BOTTOM NAVIGATION ─────────────────────────────────── */}
+        {maps.length > 0 && (
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex items-center justify-around pb-safe pt-1 px-2 z-40 shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
+            {[
+              { id: 'home', label: 'Hôm nay', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+              { id: 'notes', label: 'Ghi chú', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
+              { id: 'map', label: 'Lộ trình', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg> },
+              { id: 'tools', label: 'Công cụ', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setMobileTab(tab.id as 'home' | 'map' | 'tools' | 'notes');
+                  if (tab.id === 'map') {
+                    setActiveModal('tree_map');
+                  }
+                }}
+                className={`flex flex-col items-center gap-1 p-2 w-1/4 transition-colors ${
+                  (mobileTab === tab.id && tab.id !== 'map') || (activeModal === 'tree_map' && tab.id === 'map')
+                    ? 'text-blue-600'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <div className="mb-0.5">{tab.icon}</div>
+                <span className="text-[10px] font-bold">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
 
         {/* ── IMPORT MODAL ────────────────────────────────────────── */}
         {showImportModal && (

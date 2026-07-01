@@ -1,9 +1,10 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useMapStore } from '@/store/useMapStore'
 import { useAuthStore } from '@/store/useAuthStore'
 import type { UserMap, DayDetail, ChecklistItem } from '@/api/maps'
 import type { Todo } from '@/api/todos'
 import type { NoteHistory } from '@/api/notes'
+import { getProfile, type UserProfile } from '@/api/profile'
 
 /**
  * useDashboard — hook trung tâm của Dashboard.
@@ -41,11 +42,13 @@ export function useDashboard() {
   } = useMapStore()
 
   const today = new Date().toISOString().split('T')[0]
+  const [profile, setProfile] = useState<UserProfile | null>(null)
 
   // Tải dữ liệu khi mount
   useEffect(() => {
     fetchMaps()
     fetchTodos(today)
+    getProfile().then(setProfile).catch(console.error)
   }, [])
 
   // Chuyển đổi map
@@ -93,8 +96,9 @@ export function useDashboard() {
   )
 
   return {
-    // Auth
+    // Auth & Profile
     user,
+    profile,
     logout,
 
     // Maps

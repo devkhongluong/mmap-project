@@ -171,6 +171,17 @@ export default function DashboardComponent(props: DashboardProps) {
   // ---------- Import modal ----------
   const [showImportModal, setShowImportModal] = useState(false);
 
+  // ---------- Tree Map Collapse ----------
+  const [collapsedPhases, setCollapsedPhases] = useState<string[]>([]);
+  
+  const togglePhase = (phaseName: string) => {
+    setCollapsedPhases(prev => 
+      prev.includes(phaseName) 
+        ? prev.filter(p => p !== phaseName) 
+        : [...prev, phaseName]
+    );
+  };
+
   // ---------- Map switching ----------
   const [mapSwitching, setMapSwitching] = useState(false);
   const handleSwitchMap = async (map: UserMap) => {
@@ -305,7 +316,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 placeholder="Hôm nay tôi đã học về... Tôi hiểu được rằng... Điểm quan trọng nhất là..."
                 rows={5}
                 disabled={aiState === 'loading' || savingNote}
-                className="w-full p-4 border border-gray-200 rounded-xl text-sm leading-relaxed resize-none focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full p-4 border border-gray-200 bg-white text-gray-800 rounded-xl text-sm leading-relaxed resize-none focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all disabled:bg-gray-50 disabled:text-gray-400"
               />
               <div className="flex justify-between items-center text-xs">
                 <span className={noteText.length < 20 ? 'text-amber-500' : 'text-green-500 font-medium'}>
@@ -552,67 +563,85 @@ export default function DashboardComponent(props: DashboardProps) {
                   const nodeStatus = node.status.toLowerCase() as 'completed' | 'unlocked' | 'locked';
                   const isCompleted = nodeStatus === 'completed';
                   const isCurrent = nodeStatus === 'unlocked';
+                  
+                  // Tính tổng số bài trong phase này và số bài hoàn thành
+                  const phaseNodes = activeMap.treeNodes.filter(n => n.phaseName === node.phaseName);
+                  const phaseCompleted = phaseNodes.filter(n => n.status.toLowerCase() === 'completed').length;
+                  const isCollapsed = collapsedPhases.includes(node.phaseName);
 
                   return (
-                    <div key={node.mapDayId} className="flex flex-col items-center w-full">
+                    <React.Fragment key={node.mapDayId}>
                       {showPhaseLabel && (
-                        <div className={`${i > 0 ? 'mt-5' : ''} mb-3 text-xs font-bold uppercase tracking-widest text-gray-400 bg-white border border-gray-200 px-5 py-1.5 rounded-full shadow-sm`}>
-                          {node.phaseName}
-                        </div>
-                      )}
-
-                      {/* Connector */}
-                      {i > 0 && (
-                        <div
-                          className="w-0.5 h-8"
-                          style={{ backgroundColor: !nodeStatus.includes('locked') ? '#93C5FD' : '#E5E7EB' }}
-                        />
-                      )}
-
-                      {/* Node row */}
-                      <div className={`relative flex items-center w-full max-w-sm ${isLeft ? 'justify-end pr-[52%]' : 'justify-start pl-[52%]'}`}>
-                        {/* Center dot */}
-                        <div
-                          className={`absolute left-1/2 -translate-x-1/2 rounded-full border-4 border-white shadow z-10 ${
-                            isCurrent ? 'w-5 h-5 bg-blue-500'
-                              : isCompleted ? 'w-4 h-4 bg-blue-500'
-                              : 'w-4 h-4 bg-gray-300'
-                          }`}
-                          style={isCurrent ? {
-                            animation: 'pulse 2s ease-in-out infinite',
-                            boxShadow: '0 0 0 6px rgba(59,130,246,0.15)',
-                          } : {}}
-                        />
-
-                        {/* Connector to card */}
-                        <div
-                          className="absolute left-1/2 top-1/2 -translate-y-1/2 h-px"
-                          style={{
-                            width: '44px',
-                            left: isLeft ? 'calc(50% - 44px)' : '50%',
-                            backgroundColor: !nodeStatus.includes('locked') ? '#93C5FD' : '#E5E7EB',
-                          }}
-                        />
-
-                        {/* Card */}
-                        <div
-                          className={`px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm border whitespace-nowrap ${
-                            isCurrent
-                              ? 'bg-white border-blue-400 text-blue-700 shadow-blue-100 shadow-md'
-                              : isCompleted
-                              ? 'bg-blue-500 border-blue-600 text-white'
-                              : 'bg-white border-gray-200 text-gray-400'
-                          }`}
-                          style={isCurrent ? { transform: 'scale(1.05)' } : {}}
+                        <div 
+                          onClick={() => togglePhase(node.phaseName)}
+                          className={`${i > 0 ? 'mt-5' : ''} mb-3 text-xs font-bold uppercase tracking-widest bg-white border border-gray-200 px-5 py-2 rounded-full shadow-sm cursor-pointer hover:bg-gray-50 transition-colors flex items-center gap-2 ${isCollapsed ? 'text-gray-500' : 'text-blue-500'}`}
+                          title="Bấm để thu gọn/mở rộng Phase"
                         >
-                          {isCurrent
-                            ? `▶ Day ${node.dayIndex}: ${node.dayTitle}`
-                            : isCompleted
-                            ? `✓ Day ${node.dayIndex}: ${node.dayTitle}`
-                            : `🔒 Day ${node.dayIndex}: ${node.dayTitle}`}
+                          {node.phaseName}
+                          <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-md lowercase tracking-normal">
+                            {phaseCompleted}/{phaseNodes.length}
+                          </span>
+                          <svg className={`w-3 h-3 transition-transform ${isCollapsed ? '-rotate-90' : 'rotate-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                         </div>
-                      </div>
-                    </div>
+                      )}
+
+                      {!isCollapsed && (
+                        <div className="flex flex-col items-center w-full">
+                          {/* Connector */}
+                          {(!showPhaseLabel || !isCollapsed) && (
+                            <div
+                              className={`w-0.5 ${showPhaseLabel ? 'h-3' : 'h-8'}`}
+                              style={{ backgroundColor: !nodeStatus.includes('locked') ? '#93C5FD' : '#E5E7EB' }}
+                            />
+                          )}
+
+                          {/* Node row */}
+                          <div className={`relative flex items-center w-full max-w-sm ${isLeft ? 'justify-end pr-[52%]' : 'justify-start pl-[52%]'}`}>
+                            {/* Center dot */}
+                            <div
+                              className={`absolute left-1/2 -translate-x-1/2 rounded-full border-4 border-white shadow z-10 ${
+                                isCurrent ? 'w-5 h-5 bg-blue-500'
+                                  : isCompleted ? 'w-4 h-4 bg-blue-500'
+                                  : 'w-4 h-4 bg-gray-300'
+                              }`}
+                              style={isCurrent ? {
+                                animation: 'pulse 2s ease-in-out infinite',
+                                boxShadow: '0 0 0 6px rgba(59,130,246,0.15)',
+                              } : {}}
+                            />
+
+                            {/* Connector to card */}
+                            <div
+                              className="absolute left-1/2 top-1/2 -translate-y-1/2 h-px"
+                              style={{
+                                width: '44px',
+                                left: isLeft ? 'calc(50% - 44px)' : '50%',
+                                backgroundColor: !nodeStatus.includes('locked') ? '#93C5FD' : '#E5E7EB',
+                              }}
+                            />
+
+                            {/* Card */}
+                            <div
+                              className={`px-4 py-2.5 rounded-xl text-sm font-semibold shadow-sm border whitespace-nowrap ${
+                                isCurrent
+                                  ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700 cursor-pointer shadow-blue-200'
+                                  : isCompleted
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 cursor-pointer'
+                                  : 'bg-white text-gray-400 border-gray-200 opacity-60'
+                              }`}
+                              style={isCurrent ? { transform: 'scale(1.05)' } : {}}
+                              onClick={() => {
+                                if (isCurrent || isCompleted) {
+                                  // Có thể thêm logic chọn ngày cũ ở đây
+                                }
+                              }}
+                            >
+                              Day {node.dayIndex}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </React.Fragment>
                   );
                 })}
 

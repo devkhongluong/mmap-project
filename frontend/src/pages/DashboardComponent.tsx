@@ -3,6 +3,7 @@ import type { UserMap, DayDetail, ChecklistItem } from '@/api/maps';
 import type { Todo } from '@/api/todos';
 import type { NoteHistory } from '@/api/notes';
 import { ImportMapModal } from '@/components/ImportMapModal';
+import { reviewNoteWithAi } from '@/api/ai';
 
 // =====================================================================
 // PROPS INTERFACE — Nhận dữ liệu thực từ useDashboard() hook
@@ -47,15 +48,6 @@ interface DashboardProps {
   deleteTodo: (id: number) => Promise<void>;
   fetchNoteHistory: (mapId: number) => void;
 }
-
-// =====================================================================
-// AI FEEDBACKS (vẫn dùng random cho đến khi tích hợp Gemini BE)
-// =====================================================================
-const AI_FEEDBACKS = [
-  '🎉 **Tuyệt vời!** Bạn đã tóm tắt bài học rất súc tích và đúng trọng tâm. Tôi đặc biệt ấn tượng với cách bạn diễn giải sự khác biệt giữa các khái niệm bằng ngôn ngữ của riêng mình.\n\n💡 **Gợi ý bổ sung:** Thử liên kết lý thuyết hôm nay với một tình huống thực tế trong dự án production. Ví dụ cụ thể sẽ giúp bộ não ghi nhớ sâu hơn gấp 3 lần!',
-  '✅ **Rất tốt!** Bài note của bạn cho thấy bạn đã nắm vững phần lớn nội dung cốt lõi. Cách trình bày logic và rõ ràng.\n\n🔁 **Nhắc nhở Spaced Repetition:** Đừng quên ôn lại bài này sau 24h và 7 ngày để chuyển kiến thức từ bộ nhớ ngắn hạn sang dài hạn nhé!',
-  '💪 **Ấn tượng!** Bạn đã capture được những điểm mấu chốt nhất của ngày học hôm nay.\n\n🧐 **Thử thách tư duy:** Hãy đặt câu hỏi "Tại sao?" và "Dùng khi nào?" cho từng khái niệm bạn vừa ghi. Học chủ động (Active Recall) là phương pháp hiệu quả nhất để không quên kiến thức!',
-];
 
 // =====================================================================
 // POMODORO HOOK
@@ -254,13 +246,18 @@ export default function DashboardComponent(props: DashboardProps) {
     setActiveModal('note_input');
   };
 
-  const sendToAI = () => {
+  const sendToAI = async () => {
     if (noteText.trim().length < 20 || aiState !== 'idle') return;
     setAiState('loading');
-    setTimeout(() => {
-      setAiText(AI_FEEDBACKS[Math.floor(Math.random() * AI_FEEDBACKS.length)]);
+    
+    try {
+      const feedback = await reviewNoteWithAi(noteText);
+      setAiText(feedback);
       setAiState('done');
-    }, 2200);
+    } catch (err: any) {
+      setAiText(err.message || 'Không thể gọi AI lúc này. Thử lại sau.');
+      setAiState('done');
+    }
   };
 
   const handleSaveNote = async () => {

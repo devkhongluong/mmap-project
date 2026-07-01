@@ -177,7 +177,7 @@ export default function DashboardComponent(props: DashboardProps) {
 
   // ---------- Time & Theme ----------
   const [now, setNow] = useState(new Date());
-  const [themeMode, setThemeMode] = useState<'auto' | 'morning' | 'noon' | 'afternoon' | 'night'>('auto');
+  const [themeMode, setThemeMode] = useState<'auto' | 'sunrise' | 'morning' | 'noon' | 'afternoon' | 'sunset' | 'night'>('auto');
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -192,14 +192,16 @@ export default function DashboardComponent(props: DashboardProps) {
   const currentTheme = React.useMemo(() => {
     if (themeMode !== 'auto') return themeMode;
     const hour = now.getHours();
-    if (hour >= 6 && hour < 12) return 'morning';
+    if (hour >= 5 && hour < 7) return 'sunrise';
+    if (hour >= 7 && hour < 12) return 'morning';
     if (hour >= 12 && hour < 15) return 'noon';
-    if (hour >= 15 && hour < 18) return 'afternoon';
+    if (hour >= 15 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 19) return 'sunset';
     return 'night';
   }, [themeMode, now]);
 
   const cycleTheme = () => {
-    const modes: typeof themeMode[] = ['auto', 'morning', 'noon', 'afternoon', 'night'];
+    const modes: typeof themeMode[] = ['auto', 'sunrise', 'morning', 'noon', 'afternoon', 'sunset', 'night'];
     setThemeMode(prev => {
       const nextIdx = (modes.indexOf(prev) + 1) % modes.length;
       return modes[nextIdx];
@@ -208,18 +210,22 @@ export default function DashboardComponent(props: DashboardProps) {
 
   const getThemeBg = () => {
     switch (currentTheme) {
+      case 'sunrise': return '/backgrounds/Sunrise.png';
       case 'morning': return '/backgrounds/morning.png';
       case 'noon': return '/backgrounds/noon.png';
       case 'afternoon': return '/backgrounds/afternoon.png';
+      case 'sunset': return '/backgrounds/Sunset.png';
       case 'night': return '/backgrounds/night.png';
       default: return '/backgrounds/morning.png';
     }
   };
   const getThemeIcon = (mode: string) => {
     if (mode === 'auto') return '✨';
-    if (mode === 'morning') return '🌅';
+    if (mode === 'sunrise') return '🌅';
+    if (mode === 'morning') return '🌤️';
     if (mode === 'noon') return '☀️';
     if (mode === 'afternoon') return '🌇';
+    if (mode === 'sunset') return '🌆';
     if (mode === 'night') return '🌙';
     return '✨';
   };

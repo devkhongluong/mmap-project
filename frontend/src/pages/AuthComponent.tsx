@@ -138,10 +138,10 @@ function FormInput({ id, label, type = 'text', placeholder, value, error, touche
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-semibold text-gray-200">
+      <label htmlFor={id} className="text-sm font-semibold text-gray-700 ml-1">
         {label}
       </label>
-      <div className="relative">
+      <div className="relative text-gray-400">
         {icon && (
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             {icon}
@@ -155,40 +155,15 @@ function FormInput({ id, label, type = 'text', placeholder, value, error, touche
           onChange={e => onChange(e.target.value)}
           onBlur={onBlur}
           autoComplete={autoComplete}
-          className="w-full py-3 rounded-xl border text-sm text-white placeholder-gray-500 transition-all duration-200 focus:outline-none"
+          className="w-full py-3 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
           style={{
             paddingLeft: icon ? '42px' : '14px',
             paddingRight: rightElement ? '44px' : '14px',
-            background: 'rgba(255,255,255,0.06)',
-            borderColor: hasError ? '#EF4444' : isValid ? '#22C55E' : 'rgba(255,255,255,0.12)',
-            boxShadow: hasError
-              ? '0 0 0 3px rgba(239,68,68,0.15)'
-              : isValid
-              ? '0 0 0 3px rgba(34,197,94,0.12)'
-              : 'none',
-          }}
-          onFocus={e => {
-            if (!hasError && !isValid) {
-              e.currentTarget.style.borderColor = 'rgba(99,102,241,0.7)';
-              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.15)';
-            }
-          }}
-          onBlurCapture={e => {
-            if (!hasError && !isValid) {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)';
-              e.currentTarget.style.boxShadow = 'none';
-            }
+            borderColor: hasError ? '#EF4444' : isValid ? '#22C55E' : 'rgba(229,231,235,1)',
           }}
         />
         {rightElement && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">{rightElement}</div>
-        )}
-        {isValid && !rightElement && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
         )}
       </div>
       {hasError && (
@@ -213,6 +188,35 @@ export default function AuthComponent({
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Time & Theme
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const currentTheme = React.useMemo(() => {
+    const hour = now.getHours();
+    if (hour >= 5 && hour < 7) return 'sunrise';
+    if (hour >= 7 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 15) return 'noon';
+    if (hour >= 15 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 19) return 'sunset';
+    return 'night';
+  }, [now]);
+
+  const getThemeBg = () => {
+    switch (currentTheme) {
+      case 'sunrise': return '/backgrounds/Sunrise.png';
+      case 'morning': return '/backgrounds/morning.png';
+      case 'noon': return '/backgrounds/noon.png';
+      case 'afternoon': return '/backgrounds/afternoon.png';
+      case 'sunset': return '/backgrounds/Sunset.png';
+      case 'night': return '/backgrounds/night.png';
+      default: return '/backgrounds/morning.png';
+    }
+  };
 
   // Xóa error khi user bắt đầu gõ lại
   useEffect(() => { onClearError(); }, []);
@@ -347,7 +351,7 @@ export default function AuthComponent({
     </svg>
   );
   const IconEye = ({ show, onClick }: { show: boolean; onClick: () => void }) => (
-    <button type="button" onClick={onClick} className="text-gray-400 hover:text-gray-200 transition-colors p-0.5">
+    <button type="button" onClick={onClick} className="text-gray-400 hover:text-gray-600 transition-colors p-0.5">
       {show ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>
@@ -366,119 +370,51 @@ export default function AuthComponent({
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { font-family: 'Inter', system-ui, sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0F0F1A; min-height: 100vh; }
-
-        @keyframes float-up {
-          0%   { transform: translateY(0) scale(1); opacity: var(--op, 0.08); }
-          50%  { opacity: calc(var(--op, 0.08) * 1.5); }
-          100% { transform: translateY(-110vh) scale(0.3); opacity: 0; }
-        }
-        @keyframes slide-in-left {
-          from { opacity:0; transform: translateX(-20px); }
-          to   { opacity:1; transform: translateX(0); }
-        }
-        @keyframes slide-in-right {
-          from { opacity:0; transform: translateX(20px); }
-          to   { opacity:1; transform: translateX(0); }
-        }
-        @keyframes pulse-ring {
-          0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
-          100% { box-shadow: 0 0 0 20px rgba(99,102,241,0); }
-        }
-        @keyframes success-pop {
-          0%   { transform: scale(0.8); opacity: 0; }
-          60%  { transform: scale(1.05); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        .form-login  { animation: slide-in-left  0.35s ease-out; }
-        .form-register { animation: slide-in-right 0.35s ease-out; }
+        body { min-height: 100vh; }
+        @keyframes slide-in-right { from { opacity:0; transform: translateX(10px); } to { opacity:1; transform: translateX(0); } }
         .success-icon { animation: success-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        input:-webkit-autofill {
-          -webkit-box-shadow: 0 0 0 50px rgba(255,255,255,0.06) inset !important;
-          -webkit-text-fill-color: white !important;
-        }
+        @keyframes success-pop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
       `}</style>
 
       <div
-        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 40%, #16213E 70%, #0F3460 100%)',
-        }}
+        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden transition-all duration-700 bg-cover bg-center bg-no-repeat bg-fixed"
+        style={{ backgroundImage: `url(${getThemeBg()})` }}
       >
-        {/* Ambient glow blobs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-20"
-               style={{ background: 'radial-gradient(circle, #6366F1 0%, transparent 70%)', filter: 'blur(40px)' }}/>
-          <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full opacity-15"
-               style={{ background: 'radial-gradient(circle, #8B5CF6 0%, transparent 70%)', filter: 'blur(50px)' }}/>
-          <div className="absolute top-1/2 left-1/4 w-64 h-64 rounded-full opacity-10"
-               style={{ background: 'radial-gradient(circle, #06B6D4 0%, transparent 70%)', filter: 'blur(60px)' }}/>
-        </div>
+        <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-[2px]" />
 
-        <Particles />
-
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
-             style={{
-               backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-               backgroundSize: '48px 48px',
-             }}/>
-
-        {/* Main card */}
-        <div className="relative z-10 w-full max-w-md">
-
-          {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 mb-4">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black shadow-2xl"
-                style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)', boxShadow: '0 8px 32px rgba(99,102,241,0.4)' }}
-              >
-                M
-              </div>
-              <span className="text-3xl font-black text-white tracking-wider">MAP</span>
-            </div>
-            <p className="text-gray-400 text-sm">Hệ thống quản lý lộ trình học tập cá nhân</p>
-          </div>
-
-          {/* Glass card */}
-          <div
-            className="rounded-3xl p-8 shadow-2xl"
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              backdropFilter: 'blur(24px)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 32px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
-            }}
-          >
+        <div className="relative z-10 w-full max-w-[400px]">
+          <div className="bg-white/90 backdrop-blur-xl rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/50">
             {/* Success overlay */}
             {showSuccess && (
-              <div className="absolute inset-0 rounded-3xl flex items-center justify-center z-20"
-                   style={{ background: 'rgba(15,15,26,0.9)', backdropFilter: 'blur(8px)' }}>
+              <div className="absolute inset-0 rounded-[2rem] flex items-center justify-center z-20 bg-white/95">
                 <div className="flex flex-col items-center gap-4">
-                  <div
-                    className="success-icon w-20 h-20 rounded-full flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)', boxShadow: '0 8px 32px rgba(34,197,94,0.4)' }}
-                  >
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                  <div className="success-icon w-16 h-16 rounded-full flex items-center justify-center bg-green-500 shadow-lg shadow-green-500/30">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                   </div>
-                  <p className="text-white font-bold text-lg">
+                  <p className="text-gray-800 font-bold text-lg">
                     {mode === 'login' ? 'Đăng nhập thành công!' : 'Đăng ký thành công!'}
                   </p>
                 </div>
               </div>
             )}
 
+            {/* Logo */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 mb-2">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-blue-600 text-white font-black">M</div>
+                <span className="text-3xl font-black text-gray-900">MMAP</span>
+              </div>
+            </div>
+
             {/* Tab Switcher */}
-            <div className="flex p-1 rounded-2xl mb-7" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <div className="relative flex p-1 rounded-2xl mb-8 bg-gray-100">
               {(['login', 'register'] as AuthMode[]).map(m => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => switchMode(m)}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all duration-300"
                   style={{
                     background: mode === m ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : 'transparent',
                     color: mode === m ? 'white' : 'rgba(255,255,255,0.4)',
@@ -537,10 +473,10 @@ export default function AuthComponent({
                 <div className="flex justify-end -mt-2">
                   <button
                     type="button"
-                    className="text-xs font-medium transition-colors"
-                    style={{ color: 'rgba(99,102,241,0.9)' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#818CF8')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'rgba(99,102,241,0.9)')}
+                    className="text-xs font-semibold transition-colors"
+                    style={{ color: '#3B82F6' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#2563EB')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#3B82F6')}
                     onClick={() => alert('Tính năng đặt lại mật khẩu qua email sẽ được triển khai ở backend.')}
                   >
                     Quên mật khẩu?
@@ -554,9 +490,9 @@ export default function AuthComponent({
                   className="w-full py-3.5 rounded-xl font-bold text-sm text-white transition-all duration-200 flex items-center justify-center gap-2 mt-1"
                   style={{
                     background: isLoading
-                      ? 'rgba(99,102,241,0.5)'
-                      : 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-                    boxShadow: isLoading ? 'none' : '0 8px 24px rgba(99,102,241,0.35)',
+                      ? '#94A3B8'
+                      : 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                    boxShadow: isLoading ? 'none' : '0 8px 24px rgba(37,99,235,0.3)',
                     transform: isLoading ? 'none' : undefined,
                     cursor: isLoading ? 'not-allowed' : 'pointer',
                   }}
@@ -586,11 +522,10 @@ export default function AuthComponent({
 
                 {/* Demo credentials hint */}
                 <div
-                  className="rounded-xl p-3 text-center"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  className="rounded-xl p-3 text-center bg-gray-50/50 border border-gray-200"
                 >
-                  <p className="text-xs text-gray-500">
-                    Demo: <span className="text-gray-300 font-mono">dev@mmap.io</span> / <span className="text-gray-300 font-mono">Admin123</span>
+                  <p className="text-xs text-gray-600">
+                    Demo: <span className="text-gray-800 font-mono font-bold">dev@mmap.io</span> / <span className="text-gray-800 font-mono font-bold">Admin123</span>
                   </p>
                 </div>
               </form>
@@ -652,7 +587,7 @@ export default function AuthComponent({
                             key={i}
                             className="h-1 flex-1 rounded-full transition-all duration-300"
                             style={{
-                              background: i <= pwdStrength.score ? pwdStrength.color : 'rgba(255,255,255,0.1)',
+                              background: i <= pwdStrength.score ? pwdStrength.color : 'rgba(0,0,0,0.1)',
                             }}
                           />
                         ))}

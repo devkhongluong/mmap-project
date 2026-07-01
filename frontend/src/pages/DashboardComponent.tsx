@@ -54,17 +54,18 @@ interface DashboardProps {
 // =====================================================================
 // POMODORO HOOK
 // =====================================================================
-const WORK_SEC = 25 * 60;
-const BREAK_SEC = 5 * 60;
-
 function usePomodoro() {
+  const [workMin, setWorkMin] = useState(25);
+  const [breakMin, setBreakMin] = useState(5);
   const [phase, setPhase] = useState<'work' | 'break'>('work');
-  const [timeLeft, setTimeLeft] = useState(WORK_SEC);
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const totalTime = phase === 'work' ? WORK_SEC : BREAK_SEC;
+  const workSec = workMin * 60;
+  const breakSec = breakMin * 60;
+  const totalTime = phase === 'work' ? workSec : breakSec;
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
 
   const toggle = useCallback(() => setIsRunning(r => !r), []);
@@ -73,8 +74,23 @@ function usePomodoro() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setIsRunning(false);
     setPhase('work');
-    setTimeLeft(WORK_SEC);
-  }, []);
+    setTimeLeft(workMin * 60);
+  }, [workMin]);
+
+  const changeWorkMin = useCallback((delta: number) => {
+    if (isRunning) return;
+    setWorkMin(m => {
+      const next = Math.max(1, Math.min(90, m + delta));
+      setTimeLeft(next * 60);
+      setPhase('work');
+      return next;
+    });
+  }, [isRunning]);
+
+  const changeBreakMin = useCallback((delta: number) => {
+    if (isRunning) return;
+    setBreakMin(m => Math.max(1, Math.min(30, m + delta)));
+  }, [isRunning]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -87,20 +103,20 @@ function usePomodoro() {
         if (phase === 'work') {
           setSessions(s => s + 1);
           setPhase('break');
-          return BREAK_SEC;
+          return breakSec;
         } else {
           setPhase('work');
-          return WORK_SEC;
+          return workSec;
         }
       });
     }, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isRunning, phase]);
+  }, [isRunning, phase, workSec, breakSec]);
 
   const fmt = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  return { phase, timeLeft, isRunning, sessions, progress, toggle, reset, fmt };
+  return { phase, timeLeft, isRunning, sessions, progress, toggle, reset, fmt, workMin, breakMin, changeWorkMin, changeBreakMin };
 }
 
 // =====================================================================
@@ -225,11 +241,12 @@ export default function DashboardComponent(props: DashboardProps) {
     return a.dueTime.localeCompare(b.dueTime);
   });
 
-  const handleAddTodo = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter' || !newTodoText.trim() || addingTodo) return;
+  const handleAddTodo = async (e?: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e && e.key !== 'Enter') return;
+    if (!newTodoText.trim() || addingTodo) return;
     setAddingTodo(true);
     const dueTime = newTodoTime
-      ? `${props.today}T${newTodoTime}:00`
+      ? `${props.today}T${newTodoTime}:00+07:00`
       : null;
     await createTodo(newTodoText.trim(), dueTime);
     setNewTodoText('');
@@ -453,23 +470,35 @@ export default function DashboardComponent(props: DashboardProps) {
 
             {/* Add new */}
             <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex-shrink-0">
-              <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">Thêm việc mới (Enter để thêm)</p>
+              <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">Thêm việc mới</p>
               <div className="flex gap-2">
                 <input
                   type="time"
                   value={newTodoTime}
                   onChange={e => setNewTodoTime(e.target.value)}
-                  className="p-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white"
+                  className="p-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white flex-shrink-0"
                 />
                 <input
                   type="text"
-                  placeholder="Nhập việc cần làm và nhấn Enter..."
+                  placeholder="Nhập việc cần làm..."
                   value={newTodoText}
                   onChange={e => setNewTodoText(e.target.value)}
                   onKeyDown={handleAddTodo}
                   disabled={addingTodo}
                   className="flex-grow p-2.5 border border-blue-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white disabled:opacity-60"
                 />
+                <button
+                  onClick={() => handleAddTodo()}
+                  disabled={addingTodo || !newTodoText.trim()}
+                  className="flex-shrink-0 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                >
+                  {addingTodo ? (
+                    <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  )}
+                  Thêm
+                </button>
               </div>
             </div>
 
@@ -983,6 +1012,24 @@ export default function DashboardComponent(props: DashboardProps) {
                       <div className="text-xs text-gray-400">
                         {pomo.sessions > 0 ? `🍅 ${pomo.sessions} phiên hoàn thành hôm nay` : 'Bấm Bắt đầu để học tập trung'}
                       </div>
+
+                      {/* Time adjustment controls */}
+                      {!pomo.isRunning && (
+                        <div className="flex flex-col gap-1 mt-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-400 w-10">Tập trung</span>
+                            <button onClick={() => pomo.changeWorkMin(-5)} className="w-6 h-6 rounded-md bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 font-bold text-xs transition-colors flex items-center justify-center">−</button>
+                            <span className="text-xs font-black text-gray-700 tabular-nums w-10 text-center">{pomo.workMin} phút</span>
+                            <button onClick={() => pomo.changeWorkMin(5)} className="w-6 h-6 rounded-md bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 font-bold text-xs transition-colors flex items-center justify-center">+</button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-gray-400 w-10">Nghỉ</span>
+                            <button onClick={() => pomo.changeBreakMin(-1)} className="w-6 h-6 rounded-md bg-gray-100 text-gray-500 hover:bg-emerald-50 hover:text-emerald-600 font-bold text-xs transition-colors flex items-center justify-center">−</button>
+                            <span className="text-xs font-black text-gray-700 tabular-nums w-10 text-center">{pomo.breakMin} phút</span>
+                            <button onClick={() => pomo.changeBreakMin(1)} className="w-6 h-6 rounded-md bg-gray-100 text-gray-500 hover:bg-emerald-50 hover:text-emerald-600 font-bold text-xs transition-colors flex items-center justify-center">+</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* SVG Progress Ring */}
@@ -1146,7 +1193,7 @@ export default function DashboardComponent(props: DashboardProps) {
               <aside className={`lg:col-span-3 flex-col gap-5 ${mobileTab === 'tools' ? 'flex' : 'hidden lg:flex'}`}>
                 <div
                   onClick={() => setActiveModal('tree_map')}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 h-full flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
                 >
                   {/* Bottom progress bar */}
                   <div
@@ -1154,7 +1201,7 @@ export default function DashboardComponent(props: DashboardProps) {
                     style={{ width: `${activeMap?.progressPct ?? 0}%` }}
                   />
 
-                  <div className="flex justify-between items-center mb-4">
+                  <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2">
@@ -1163,20 +1210,47 @@ export default function DashboardComponent(props: DashboardProps) {
                       </div>
                       <h2 className="font-bold text-gray-700 text-sm tracking-wide">TREE MAP</h2>
                     </div>
-                    <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">
-                      {activeMap?.progressPct ?? 0}%
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">
+                        {activeMap?.progressPct ?? 0}%
+                      </span>
+                      <span className="text-[10px] text-gray-300 group-hover:text-indigo-400 transition-colors font-semibold">
+                        Xem đầy đủ →
+                      </span>
+                    </div>
                   </div>
 
-                  {/* Mini Tree Map */}
-                  <div className="flex-grow w-full border border-dashed border-gray-100 rounded-xl bg-gradient-to-b from-gray-50 to-white flex items-start justify-center overflow-hidden relative py-3">
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="bg-blue-50 rounded-xl p-2 text-center">
+                      <div className="text-lg font-black text-blue-600">{activeMap?.currentDayIndex ?? 0}</div>
+                      <div className="text-[10px] text-blue-400">Ngày hiện tại</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-2 text-center">
+                      <div className="text-lg font-black text-gray-600">
+                        {(activeMap?.totalDays ?? 0) - (activeMap?.currentDayIndex ?? 0)}
+                      </div>
+                      <div className="text-[10px] text-gray-400">Ngày còn lại</div>
+                    </div>
+                  </div>
+
+                  {/* Mini Tree Map — fixed height, scrollable */}
+                  <div
+                    className="w-full border border-dashed border-gray-100 rounded-xl bg-gradient-to-b from-gray-50 to-white flex items-start justify-center overflow-y-auto relative py-3"
+                    style={{ maxHeight: '260px' }}
+                    onClick={e => e.stopPropagation()}
+                  >
                     {activeMap && activeMap.treeNodes.length > 0 ? (
-                      <svg width="160" height="100%" viewBox={`0 0 160 ${activeMap.treeNodes.length * 36 + 20}`} className="overflow-visible">
+                      <svg
+                        width="160"
+                        height={Math.max(200, activeMap.treeNodes.length * 32 + 20)}
+                        viewBox={`0 0 160 ${Math.max(200, activeMap.treeNodes.length * 32 + 20)}`}
+                      >
                         {/* Vertical guide */}
-                        <line x1="80" y1="5" x2="80" y2={activeMap.treeNodes.length * 36 + 10} stroke="#E5E7EB" strokeWidth="1.5" strokeDasharray="3 3"/>
+                        <line x1="80" y1="5" x2="80" y2={activeMap.treeNodes.length * 32 + 10} stroke="#E5E7EB" strokeWidth="1.5" strokeDasharray="3 3"/>
 
                         {activeMap.treeNodes.map((node, i) => {
-                          const y = 14 + i * 36;
+                          const y = 14 + i * 32;
                           const isLeft = i % 2 === 0;
                           const lineX2 = isLeft ? 68 : 92;
                           const labelX = isLeft ? 62 : 88;
@@ -1191,13 +1265,13 @@ export default function DashboardComponent(props: DashboardProps) {
                               {isCurrent ? (
                                 <>
                                   <circle cx="80" cy={y} r="7" fill="#DBEAFE" stroke="#3B82F6" strokeWidth="2"/>
-                                  <circle cx="80" cy={y} r="3.5" fill="#3B82F6" style={{ animation: 'pulse 2s ease infinite' }}/>
+                                  <circle cx="80" cy={y} r="3.5" fill="#3B82F6"/>
                                 </>
                               ) : (
                                 <circle cx="80" cy={y} r={isCompleted ? 5 : 4.5} fill={isCompleted ? '#3B82F6' : 'white'} stroke={color} strokeWidth="1.5"/>
                               )}
                               <text x={labelX} y={y + 1} textAnchor={labelAnchor as 'end' | 'start'} fontSize="7.5" fill={isCurrent ? '#3B82F6' : isCompleted ? '#6B7280' : '#9CA3AF'} fontWeight={isCurrent ? '700' : '500'} dominantBaseline="middle">
-                                {node.dayTitle.length > 14 ? node.dayTitle.substring(0, 14) + '…' : node.dayTitle}
+                                {node.dayTitle.length > 13 ? node.dayTitle.substring(0, 13) + '…' : node.dayTitle}
                               </text>
                             </g>
                           );
@@ -1206,24 +1280,10 @@ export default function DashboardComponent(props: DashboardProps) {
                     ) : (
                       <div className="text-xs text-gray-400 text-center py-10">Chưa có dữ liệu</div>
                     )}
-
-                    <div className="absolute bottom-2 right-2 text-xs text-gray-300 group-hover:text-indigo-400 transition-colors">
-                      Xem đầy đủ →
-                    </div>
                   </div>
 
-                  {/* Stats */}
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div className="bg-blue-50 rounded-xl p-2.5 text-center">
-                      <div className="text-xl font-black text-blue-600">{activeMap?.currentDayIndex ?? 0}</div>
-                      <div className="text-xs text-blue-400">Ngày hiện tại</div>
-                    </div>
-                    <div className="bg-gray-50 rounded-xl p-2.5 text-center">
-                      <div className="text-xl font-black text-gray-600">
-                        {(activeMap?.totalDays ?? 0) - (activeMap?.currentDayIndex ?? 0)}
-                      </div>
-                      <div className="text-xs text-gray-400">Ngày còn lại</div>
-                    </div>
+                  <div className="mt-2 text-center text-[10px] text-gray-300 group-hover:text-indigo-400 transition-colors">
+                    Click để xem toàn bộ lộ trình
                   </div>
                 </div>
               </aside>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { UserMap, DayDetail, ChecklistItem } from '@/api/maps';
 import type { Todo } from '@/api/todos';
 import type { NoteHistory } from '@/api/notes';
+import { ImportMapModal } from '@/components/ImportMapModal';
 
 // =====================================================================
 // PROPS INTERFACE — Nhận dữ liệu thực từ useDashboard() hook
@@ -40,6 +41,7 @@ interface DashboardProps {
   toggleChecklist: (checklistId: number) => Promise<void>;
   saveNote: (mapDayId: number, noteContent: string) => Promise<void>;
   fetchTodos: (date: string) => void;
+  fetchMaps: () => Promise<void>;
   createTodo: (content: string, dueTime: string | null) => Promise<void>;
   toggleTodo: (id: number) => Promise<void>;
   deleteTodo: (id: number) => Promise<void>;
@@ -159,7 +161,7 @@ export default function DashboardComponent(props: DashboardProps) {
     noteHistory,
     error, clearError,
     switchMap, toggleChecklist, saveNote,
-    createTodo, toggleTodo, deleteTodo,
+    fetchMaps, createTodo, toggleTodo, deleteTodo,
     fetchNoteHistory,
   } = props;
 
@@ -173,6 +175,9 @@ export default function DashboardComponent(props: DashboardProps) {
     d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const fmtDate = (d: Date) =>
     d.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  // ---------- Import modal ----------
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // ---------- Map switching ----------
   const [mapSwitching, setMapSwitching] = useState(false);
@@ -772,8 +777,8 @@ export default function DashboardComponent(props: DashboardProps) {
                 ))}
                 <div className="w-px h-5 bg-gray-300 mx-1 flex-shrink-0" />
                 <button
-                  onClick={() => alert('Tính năng import Excel sẽ sớm ra mắt!')}
-                  className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-blue-500 hover:bg-white/60 transition-all flex items-center gap-1 flex-shrink-0"
+                  onClick={() => setShowImportModal(true)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-semibold text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-all flex items-center gap-1 flex-shrink-0"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
                   Thêm Mới
@@ -1166,6 +1171,14 @@ export default function DashboardComponent(props: DashboardProps) {
             </>
           )}
         </main>
+
+        {/* ── IMPORT MODAL ────────────────────────────────────────── */}
+        {showImportModal && (
+          <ImportMapModal
+            onClose={() => setShowImportModal(false)}
+            onSuccess={() => fetchMaps()}
+          />
+        )}
 
         {/* ── MODAL OVERLAY ──────────────────────────────────────────── */}
         {activeModal && (

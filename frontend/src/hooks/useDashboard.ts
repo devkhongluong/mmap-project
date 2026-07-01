@@ -102,6 +102,7 @@ export function useDashboard() {
     activeMapId,
     activeMap: getActiveMap(),
     isLoadingMaps,
+    fetchMaps,
 
     // Current day
     currentDay,

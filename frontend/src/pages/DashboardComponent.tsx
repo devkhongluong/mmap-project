@@ -1048,10 +1048,10 @@ export default function DashboardComponent(props: DashboardProps) {
 
                 {/* Clock */}
                 <div className="text-center py-1">
-                  <h1 className="text-4xl font-black tracking-widest text-gray-800 tabular-nums">
+                  <h1 className={`text-4xl font-black tracking-widest tabular-nums transition-colors ${currentTheme === 'night' ? 'text-white drop-shadow-md' : 'text-gray-800'}`}>
                     {fmtClock(now)}
                   </h1>
-                  <p className="text-sm text-gray-600 font-medium mt-1 capitalize">{fmtDate(now)}</p>
+                  <p className={`text-sm font-medium mt-1 capitalize transition-colors ${currentTheme === 'night' ? 'text-white drop-shadow-sm' : 'text-gray-600'}`}>{fmtDate(now)}</p>
                 </div>
 
                 {/* ── Pomodoro Timer ── */}

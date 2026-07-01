@@ -140,7 +140,7 @@ function EmptyMapState() {
       <div className="text-7xl">🗺️</div>
       <div>
         <h2 className="text-2xl font-black text-gray-700 mb-2">Chưa có lộ trình học tập</h2>
-        <p className="text-gray-400 text-sm max-w-sm mx-auto leading-relaxed">
+        <p className="text-gray-600 font-medium text-sm max-w-sm mx-auto leading-relaxed">
           Bắt đầu bằng cách import file Excel lộ trình học tập của bạn. Mỗi Map là một hành trình chinh phục kỹ năng mới!
         </p>
       </div>
@@ -366,7 +366,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 {currentDay ? `Day ${currentDay.dayIndex}: ${currentDay.dayTitle}` : '...'}
               </span>
               <h2 className="text-xl font-bold text-gray-800 mt-0.5">Xác nhận & Nhập Note</h2>
-              <p className="text-sm text-gray-500 mt-1 leading-relaxed">
+              <p className="text-sm text-gray-700 font-medium mt-1 leading-relaxed">
                 Tóm tắt những gì bạn đã học bằng ngôn ngữ của chính mình.
                 <span className="text-red-400 font-medium"> Chức năng dán (Ctrl+V) đã bị tắt</span> để đảm bảo bạn tự viết.
               </p>
@@ -472,7 +472,7 @@ export default function DashboardComponent(props: DashboardProps) {
             <div className="text-7xl" style={{ animation: 'bounce 1s ease infinite' }}>🎉</div>
             <div>
               <h2 className="text-2xl font-black text-gray-800 mb-1">Hoàn thành ngày học!</h2>
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-700 font-medium text-sm">
                 {currentDay ? `Day ${currentDay.dayIndex}: ${currentDay.dayTitle}` : ''}
               </p>
             </div>
@@ -489,7 +489,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </div>
               <div className="text-xs text-blue-400 mt-2">{activeMap?.progressPct ?? 0}% hoàn thành</div>
             </div>
-            <p className="text-sm text-gray-400 italic">
+            <p className="text-sm text-gray-600 font-medium italic">
               ✨ Node hôm nay trên Tree Map đã sáng lên!
             </p>
             <button
@@ -568,7 +568,7 @@ export default function DashboardComponent(props: DashboardProps) {
                       onChange={() => toggleTodo(todo.id)}
                       className="w-5 h-5 text-blue-600 rounded cursor-pointer accent-blue-500 flex-shrink-0"
                     />
-                    <span className={`text-sm truncate ${todo.done ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
+                    <span className={`text-sm truncate ${todo.done ? 'text-gray-500 font-medium line-through' : 'text-gray-900 font-semibold'}`}>
                       {todo.taskContent}
                     </span>
                   </div>
@@ -603,7 +603,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </div>
               <div className="text-right">
                 <div className="text-3xl font-black text-gray-800">{activeMap.progressPct}%</div>
-                <div className="text-xs text-gray-400">đã hoàn thành</div>
+                <div className="text-xs text-gray-600 font-medium">đã hoàn thành</div>
               </div>
             </div>
 
@@ -739,7 +739,7 @@ export default function DashboardComponent(props: DashboardProps) {
           <div className="flex flex-col h-full gap-4">
             <div>
               <h2 className="text-xl font-bold text-gray-800">Lịch sử Note</h2>
-              <p className="text-sm text-gray-400 mt-0.5">{activeMap?.title}</p>
+              <p className="text-sm text-gray-600 font-medium mt-0.5">{activeMap?.title}</p>
             </div>
             <div className="grid grid-cols-3 gap-3 overflow-y-auto pr-1">
               {noteHistory.length === 0 ? (
@@ -749,11 +749,11 @@ export default function DashboardComponent(props: DashboardProps) {
               ) : noteHistory.map((note) => (
                 <div
                   key={note.noteId}
-                  className="bg-white/85 backdrop-blur-3xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-xl p-3.5 hover:border-blue-200 hover:shadow-sm transition-all"
+                  className="bg-white/95 backdrop-blur-[100px] border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-xl p-3.5 hover:border-blue-200 hover:shadow-sm transition-all"
                 >
                   <div className="text-xs font-bold text-blue-500 mb-1.5">Day {note.dayIndex}</div>
-                  <div className="text-xs font-semibold text-gray-600 mb-1 line-clamp-1">{note.dayTitle}</div>
-                  <div className="text-xs text-gray-500 leading-relaxed line-clamp-3 italic">
+                  <div className="text-xs font-bold text-gray-800 mb-1 line-clamp-1">{note.dayTitle}</div>
+                  <div className="text-xs text-gray-700 font-medium leading-relaxed line-clamp-3 italic">
                     {note.noteContent}
                   </div>
                   <div className="text-xs text-gray-300 mt-2">
@@ -778,7 +778,7 @@ export default function DashboardComponent(props: DashboardProps) {
 
             <div className="text-center">
               <h2 className="text-xl font-black text-gray-800">{user?.username ?? 'Người dùng'}</h2>
-              <p className="text-sm text-gray-400 mt-1">{user?.email}</p>
+              <p className="text-sm text-gray-600 font-medium mt-1">{user?.email}</p>
             </div>
 
             {/* Stats */}
@@ -873,7 +873,7 @@ export default function DashboardComponent(props: DashboardProps) {
         <div className="absolute inset-0 bg-slate-900/10 pointer-events-none" />
 
         {/* ── HEADER ─────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-2xl border-b border-white/30 shadow-sm">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-[100px] border-b border-white/30 shadow-sm">
           <div className="max-w-7xl mx-auto px-6 py-3 flex justify-between items-center gap-4">
 
             {/* Logo + Map Selector */}
@@ -883,7 +883,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                <nav className="flex items-center bg-white/50 backdrop-blur-xl rounded-xl p-1 gap-0.5 min-w-0 overflow-x-auto shadow-sm border border-white/40">
+                <nav className="flex items-center bg-white/85 backdrop-blur-[100px] rounded-xl p-1 gap-0.5 min-w-0 overflow-x-auto shadow-sm border border-white/40">
                   {isLoadingMaps ? (
                     <div className="px-4 py-1.5 text-sm text-gray-400">Đang tải...</div>
                   ) : maps.map(m => (
@@ -970,7 +970,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 {/* Note Widget */}
                 <div
                   onClick={handleOpenNoteHistory}
-                  className="bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-purple-200 transition-all group"
+                  className="bg-white/95 backdrop-blur-[100px] rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-purple-200 transition-all group"
                   style={{ minHeight: 148 }}
                 >
                   <div className="flex justify-between items-center mb-3">
@@ -997,7 +997,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 {/* Todo Widget */}
                 <div
                   onClick={() => setActiveModal('todo_manage')}
-                  className="bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group flex-grow"
+                  className="bg-white/95 backdrop-blur-[100px] rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group flex-grow"
                 >
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
@@ -1029,7 +1029,7 @@ export default function DashboardComponent(props: DashboardProps) {
                           )}
                         </div>
                         <div className="min-w-0 flex-grow">
-                          <span className={`text-sm block truncate ${todo.done ? 'text-gray-400 line-through' : 'text-gray-600 font-medium'}`}>
+                          <span className={`text-sm block truncate ${todo.done ? 'text-gray-500 font-medium line-through' : 'text-gray-600 font-medium'}`}>
                             {todo.taskContent}
                           </span>
                           <span className="text-xs font-bold text-blue-400">{formatDueTime(todo.dueTime)}</span>
@@ -1051,11 +1051,11 @@ export default function DashboardComponent(props: DashboardProps) {
                   <h1 className="text-4xl font-black tracking-widest text-gray-800 tabular-nums">
                     {fmtClock(now)}
                   </h1>
-                  <p className="text-sm text-gray-400 mt-1 capitalize">{fmtDate(now)}</p>
+                  <p className="text-sm text-gray-600 font-medium mt-1 capitalize">{fmtDate(now)}</p>
                 </div>
 
                 {/* ── Pomodoro Timer ── */}
-                <div className="bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5">
+                <div className="bg-white/95 backdrop-blur-[100px] rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5">
                   <div className="flex items-center justify-between gap-4">
 
                     {/* Phase + Time Info */}
@@ -1139,7 +1139,7 @@ export default function DashboardComponent(props: DashboardProps) {
 
                 {/* ── Checklist Card ── */}
                 <div
-                  className={`bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-6 flex-grow flex flex-col relative overflow-hidden transition-opacity duration-300 ${mapSwitching ? 'opacity-40 pointer-events-none' : 'fade-in'}`}
+                  className={`bg-white/95 backdrop-blur-[100px] rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-6 flex-grow flex flex-col relative overflow-hidden transition-opacity duration-300 ${mapSwitching ? 'opacity-40 pointer-events-none' : 'fade-in'}`}
                 >
                   {/* Top accent bar */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-2xl" />
@@ -1208,7 +1208,7 @@ export default function DashboardComponent(props: DashboardProps) {
                           checked={item.isChecked}
                           onChange={() => handleCheck(item)}
                         />
-                        <span className={`text-sm font-medium leading-relaxed transition-colors ${item.isChecked ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                        <span className={`text-sm font-medium leading-relaxed transition-colors ${item.isChecked ? 'text-gray-500 font-medium line-through' : 'text-gray-700'}`}>
                           {item.checkpointContent}
                         </span>
                       </label>
@@ -1252,7 +1252,7 @@ export default function DashboardComponent(props: DashboardProps) {
               <aside className={`lg:col-span-3 flex-col gap-5 ${mobileTab === 'tools' ? 'flex' : 'hidden lg:flex'}`}>
                 <div
                   onClick={() => setActiveModal('tree_map')}
-                  className="bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
+                  className="bg-white/95 backdrop-blur-[100px] rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
                 >
                   {/* Bottom progress bar */}
                   <div
@@ -1352,7 +1352,7 @@ export default function DashboardComponent(props: DashboardProps) {
 
         {/* ── MOBILE BOTTOM NAVIGATION ─────────────────────────────────── */}
         {maps.length > 0 && (
-          <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/70 backdrop-blur-md border-t border-white/50 flex items-center justify-around pb-safe pt-1 px-2 z-40 shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-[100px] border-t border-white/50 flex items-center justify-around pb-safe pt-1 px-2 z-40 shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
             {[
               { id: 'home', label: 'Hôm nay', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
               { id: 'notes', label: 'Ghi chú', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },

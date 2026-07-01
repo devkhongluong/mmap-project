@@ -59,12 +59,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-    // ── 500 — Lỗi bất ngờ ────────────────────────────────────────────────
+    // ── 500 — Lỗi bất ngờ ────────────────────────────────────────────
+    @ExceptionHandler(java.io.IOException.class)
+    public ResponseEntity<ErrorResponse> handleIOException(java.io.IOException ex) {
+        log.error("IOException (thường do file Excel lỗi)", ex);
+        return buildResponse(HttpStatus.BAD_REQUEST,
+                "Lỗi đọc file Excel: " + ex.getMessage());
+    }
+
+    // ── 500 — NoSuchElementException (orElseThrow) ──────────────────────
+    @ExceptionHandler(java.util.NoSuchElementException.class)
+    public ResponseEntity<ErrorResponse> handleNoSuchElement(java.util.NoSuchElementException ex) {
+        log.error("NoSuchElementException", ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Không tìm thấy dữ liệu: " + ex.getMessage());
+    }
+
+    // ── 500 — Lỗi bất ngờ ────────────────────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
-        log.error("Unhandled exception", ex);
+        log.error("Unhandled exception: {}", ex.getMessage(), ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                "Đã xảy ra lỗi nội bộ. Vui lòng thử lại sau.");
+                "Lỗi hệ thống: " + ex.getClass().getSimpleName() + " - " + ex.getMessage());
     }
 
     // ── Helper ────────────────────────────────────────────────────────────

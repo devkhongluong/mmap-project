@@ -8,6 +8,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Bảng daily_todos — To-do List toàn cục (Global), không gắn với Map học.
@@ -48,6 +50,7 @@ public class DailyTodo {
     private OffsetDateTime dueTime;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20,
             columnDefinition = "VARCHAR(20) DEFAULT 'PENDING'")
     private TodoStatus status = TodoStatus.PENDING;

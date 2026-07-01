@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
@@ -36,6 +38,7 @@ public class UserMap {
     private LearningMap map;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20,
             columnDefinition = "VARCHAR(20) DEFAULT 'IN_PROGRESS'")
     private UserMapStatus status = UserMapStatus.IN_PROGRESS;

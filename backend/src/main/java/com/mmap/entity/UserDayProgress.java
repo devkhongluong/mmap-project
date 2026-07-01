@@ -2,8 +2,9 @@ package com.mmap.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Bảng user_day_progress — N-N: User ↔ MapDay.
@@ -32,6 +33,7 @@ public class UserDayProgress {
     private MapDay mapDay;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20,
             columnDefinition = "VARCHAR(20) DEFAULT 'LOCKED'")
     private DayProgressStatus status = DayProgressStatus.LOCKED;

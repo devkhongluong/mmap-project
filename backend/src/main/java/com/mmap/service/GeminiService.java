@@ -24,7 +24,7 @@ public class GeminiService {
 
     public GeminiService(ObjectMapper objectMapper) {
         this.restClient = RestClient.builder()
-                .baseUrl("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
+                .baseUrl("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent")
                 .build();
         this.objectMapper = objectMapper;
     }
@@ -82,7 +82,7 @@ public class GeminiService {
             if (body.contains("API_KEY_INVALID") || body.contains("API key not valid")) {
                 return "API Key Gemini không hợp lệ. Vui lòng kiểm tra lại trong cài đặt Render.";
             } else if (body.contains("RESOURCE_EXHAUSTED") || body.contains("quota")) {
-                return "Đã hết quota API Gemini hôm nay. Vui lòng thử lại vào ngày mai.";
+                return "API Gemini đang bị giới hạn (rate limit hoặc hết quota). Thử lại sau 1 phút nhé!";
             }
             return "Gemini API lỗi (" + ex.getStatusCode() + "): " + body;
         } catch (Exception e) {

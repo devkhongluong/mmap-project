@@ -743,7 +743,7 @@ export default function DashboardComponent(props: DashboardProps) {
               ) : noteHistory.map((note) => (
                 <div
                   key={note.noteId}
-                  className="bg-white/70 backdrop-blur-md border border-white/50 rounded-xl p-3.5 hover:border-blue-200 hover:shadow-sm transition-all"
+                  className="bg-white/85 backdrop-blur-3xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-xl p-3.5 hover:border-blue-200 hover:shadow-sm transition-all"
                 >
                   <div className="text-xs font-bold text-blue-500 mb-1.5">Day {note.dayIndex}</div>
                   <div className="text-xs font-semibold text-gray-600 mb-1 line-clamp-1">{note.dayTitle}</div>
@@ -860,12 +860,14 @@ export default function DashboardComponent(props: DashboardProps) {
       )}
 
       <div 
-        className="min-h-screen flex flex-col transition-all duration-700 bg-cover bg-center bg-no-repeat bg-fixed"
+        className="min-h-screen flex flex-col transition-all duration-700 bg-cover bg-center bg-no-repeat bg-fixed relative"
         style={{ backgroundImage: `url(${getThemeBg()})` }}
       >
+        {/* Dimmed Overlay */}
+        <div className="absolute inset-0 bg-slate-900/10 pointer-events-none" />
 
         {/* ── HEADER ─────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-xl border-b border-white/20 shadow-sm">
+        <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-2xl border-b border-white/30 shadow-sm">
           <div className="max-w-7xl mx-auto px-6 py-3 flex justify-between items-center gap-4">
 
             {/* Logo + Map Selector */}
@@ -875,7 +877,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </div>
 
               <div className="flex items-center gap-2">
-                <nav className="flex items-center bg-white/40 backdrop-blur-md rounded-xl p-1 gap-0.5 min-w-0 overflow-x-auto shadow-sm border border-white/40">
+                <nav className="flex items-center bg-white/50 backdrop-blur-xl rounded-xl p-1 gap-0.5 min-w-0 overflow-x-auto shadow-sm border border-white/40">
                   {isLoadingMaps ? (
                     <div className="px-4 py-1.5 text-sm text-gray-400">Đang tải...</div>
                   ) : maps.map(m => (
@@ -962,7 +964,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 {/* Note Widget */}
                 <div
                   onClick={handleOpenNoteHistory}
-                  className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-purple-200 transition-all group"
+                  className="bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-purple-200 transition-all group"
                   style={{ minHeight: 148 }}
                 >
                   <div className="flex justify-between items-center mb-3">
@@ -989,7 +991,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 {/* Todo Widget */}
                 <div
                   onClick={() => setActiveModal('todo_manage')}
-                  className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group flex-grow"
+                  className="bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group flex-grow"
                 >
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
@@ -1047,7 +1049,7 @@ export default function DashboardComponent(props: DashboardProps) {
                 </div>
 
                 {/* ── Pomodoro Timer ── */}
-                <div className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5">
+                <div className="bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5">
                   <div className="flex items-center justify-between gap-4">
 
                     {/* Phase + Time Info */}
@@ -1131,7 +1133,7 @@ export default function DashboardComponent(props: DashboardProps) {
 
                 {/* ── Checklist Card ── */}
                 <div
-                  className={`bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-6 flex-grow flex flex-col relative overflow-hidden transition-opacity duration-300 ${mapSwitching ? 'opacity-40 pointer-events-none' : 'fade-in'}`}
+                  className={`bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-6 flex-grow flex flex-col relative overflow-hidden transition-opacity duration-300 ${mapSwitching ? 'opacity-40 pointer-events-none' : 'fade-in'}`}
                 >
                   {/* Top accent bar */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-2xl" />
@@ -1244,7 +1246,7 @@ export default function DashboardComponent(props: DashboardProps) {
               <aside className={`lg:col-span-3 flex-col gap-5 ${mobileTab === 'tools' ? 'flex' : 'hidden lg:flex'}`}>
                 <div
                   onClick={() => setActiveModal('tree_map')}
-                  className="bg-white/70 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
+                  className="bg-white/85 backdrop-blur-3xl rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
                 >
                   {/* Bottom progress bar */}
                   <div

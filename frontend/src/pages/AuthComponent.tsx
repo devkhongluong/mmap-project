@@ -409,17 +409,17 @@ export default function AuthComponent({
             </div>
 
             {/* Tab Switcher */}
-            <div className="relative flex p-1 rounded-2xl mb-8 bg-gray-100">
+            <div className="relative flex p-1.5 rounded-2xl mb-8 bg-gray-100/80 backdrop-blur-sm">
               {(['login', 'register'] as AuthMode[]).map(m => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => switchMode(m)}
-                  style={{
-                    background: mode === m ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : 'transparent',
-                    color: mode === m ? 'white' : 'rgba(255,255,255,0.4)',
-                    boxShadow: mode === m ? '0 4px 16px rgba(99,102,241,0.35)' : 'none',
-                  }}
+                  className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${
+                    mode === m
+                      ? 'bg-white text-gray-800 shadow-sm border border-gray-200/50'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 >
                   {m === 'login' ? 'Đăng nhập' : 'Đăng ký'}
                 </button>

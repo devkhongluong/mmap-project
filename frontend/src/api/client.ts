@@ -1,5 +1,4 @@
 import axios from 'axios'
-import type { InternalAxiosRequestConfig } from 'axios'
 
 // Mở rộng type để hỗ trợ thuộc tính retry
 declare module 'axios' {
@@ -12,12 +11,13 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 /**
  * Axios instance dùng chung toàn app.
- * Tự động gắn JWT vào mọi request và xử lý 401.
- * Có retry logic để xử lý Render cold-start.
+ * - Tự động gắn JWT vào mọi request
+ * - Xử lý 401 (token hết hạn): clear TOÀN BỘ auth storage và redirect về /login
+ * - Retry tự động khi lỗi mạng / server cold-start (Render free tier)
  */
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 90000, // 90s — đủ thời gian để Render thức dậy
+  timeout: 90000, // 90s — đủ thời gian để Render thức dậy sau cold-start
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -28,14 +28,13 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    // Retry count để response interceptor biết
     config._retryCount = config._retryCount ?? 0
     return config
   },
   (error) => Promise.reject(error)
 )
 
-// ── Response interceptor — retry + xử lý lỗi ──────────────────────────
+// ── Response interceptor — xử lý 401 + retry cold-start ────────────────
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = [3000, 6000, 12000] // exponential backoff
 
@@ -44,33 +43,35 @@ apiClient.interceptors.response.use(
   async (error) => {
     const config = error.config
 
-    // Token hết hạn hoặc không hợp lệ và đây không phải lỗi network
-    // chỉ logout khi có response rõ ràng (không phải timeout / network error)
-    if (error.response?.status === 401 && error.response?.data) {
+    // ── 401: Token hết hạn / không hợp lệ ─────────────────────────────
+    // Clear TOÀN BỘ auth data: cả mmap_token, mmap_user, và mmap-auth (Zustand persist key)
+    // Nếu thiếu mmap-auth, Zustand vẫn giữ token cũ → user không bị logout thật sự
+    if (error.response?.status === 401) {
       localStorage.removeItem('mmap_token')
       localStorage.removeItem('mmap_user')
-      window.location.href = '/login'
-      return Promise.reject(new Error('Phiên làm việc hết hạn, vui lòng đăng nhập lại.'))
+      localStorage.removeItem('mmap-auth') // ← QUAN TRỌNG: key của Zustand persist
+      window.location.replace('/login')    // replace để không thể nhấn Back quay lại
+      return Promise.reject(new Error('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.'))
     }
 
-    // Retry khi lỗi mạng (server đang ngủ / cold-start) hoặc 5xx
-    const isNetworkError = !error.response // timeout, CORS, kết nối bị từ chối
+    // ── Retry khi lỗi mạng hoặc 5xx (server cold-start) ───────────────
+    const isNetworkError = !error.response // timeout, CORS, connection refused
     const isServerError = error.response?.status >= 500
 
     if ((isNetworkError || isServerError) && config && config._retryCount < MAX_RETRIES) {
       config._retryCount += 1
       const delay = RETRY_DELAY_MS[config._retryCount - 1] ?? 10000
-      console.warn(`[API] Làn thử ${config._retryCount}/${MAX_RETRIES} sau ${delay / 1000}s... (${config.url})`)
+      console.warn(`[API] Thử lại lần ${config._retryCount}/${MAX_RETRIES} sau ${delay / 1000}s... (${config.url})`)
       await new Promise((resolve) => setTimeout(resolve, delay))
       return apiClient(config)
     }
 
-    // Trả về message lỗi thân thiện
+    // ── Trả về message lỗi thân thiện ─────────────────────────────────
     const message =
       error.response?.data?.message ||
       error.response?.data?.error ||
       (isNetworkError
-        ? 'Không thể kết nối đến máy chủ. Máy chủ có thể đang khởi động (mất ~30 giây). Vui lòng chờ...'
+        ? 'Không thể kết nối đến máy chủ. Máy chủ có thể đang khởi động (~30 giây). Vui lòng chờ...'
         : 'Đã xảy ra lỗi. Vui lòng thử lại.')
     return Promise.reject(new Error(message))
   }

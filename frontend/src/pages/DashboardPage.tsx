@@ -7,13 +7,20 @@ import DashboardComponent from './DashboardComponent'
  *
  * Dùng useDashboard() hook để lấy toàn bộ state + actions từ store,
  * sau đó truyền xuống DashboardComponent qua props.
- *
- * DashboardComponent hiện tại vẫn dùng mock data nội bộ.
- * Khi sẵn sàng wire API thực, chỉ cần update DashboardComponent
- * để đọc từ props thay vì MOCK_MAPS.
  */
 export function DashboardPage() {
   const dashboard = useDashboard()
+
+  // Server đang cold-start → hiện màn hình chờ thân thiện
+  if (dashboard.isServerWarming) {
+    return (
+      <LoadingScreen
+        message="Đang kết nối đến máy chủ, vui lòng chờ..."
+        isServerWarming={true}
+        onRetry={dashboard.retryLoad}
+      />
+    )
+  }
 
   // Đang tải lần đầu — chưa có maps nào
   if (dashboard.isLoadingMaps && dashboard.maps.length === 0) {

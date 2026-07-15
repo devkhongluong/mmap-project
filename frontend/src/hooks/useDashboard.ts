@@ -11,9 +11,6 @@ import { getProfile, type UserProfile } from '@/api/profile'
  *
  * Gộp tất cả state + actions từ useMapStore và useAuthStore,
  * trả về một object thuận tiện cho DashboardComponent sử dụng.
- *
- * Pattern này giúp DashboardComponent không phụ thuộc trực tiếp
- * vào store — dễ test và dễ swap sau này.
  */
 export function useDashboard() {
   const { user, logout } = useAuthStore()
@@ -43,13 +40,41 @@ export function useDashboard() {
 
   const today = new Date().toISOString().split('T')[0]
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [isServerWarming, setIsServerWarming] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
 
-  // Tải dữ liệu khi mount
+  // ── Tải dữ liệu khi mount hoặc retry ──────────────────────────────────
+  const loadData = useCallback(async () => {
+    setIsServerWarming(false)
+    try {
+      await Promise.all([
+        fetchMaps(),
+        fetchTodos(today),
+        getProfile().then(setProfile).catch(() => {/* profile không critical */}),
+      ])
+    } catch {
+      // Nếu lỗi mạng (server cold-start), hiện trạng thái warming
+      setIsServerWarming(true)
+    }
+  }, [fetchMaps, fetchTodos, today]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
-    fetchMaps()
-    fetchTodos(today)
-    getProfile().then(setProfile).catch(console.error)
-  }, [])
+    loadData()
+  }, [retryCount]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Nếu có error từ store (sau khi đã hết retry tự động) thì đánh dấu warming
+  useEffect(() => {
+    if (error && (error.includes('kết nối') || error.includes('connect'))) {
+      setIsServerWarming(true)
+    }
+  }, [error])
+
+  // Retry thủ công
+  const retryLoad = useCallback(() => {
+    clearError()
+    setIsServerWarming(false)
+    setRetryCount(c => c + 1)
+  }, [clearError])
 
   // Chuyển đổi map
   const handleSwitchMap = useCallback(
@@ -119,9 +144,11 @@ export function useDashboard() {
     // Note history
     noteHistory,
 
-    // Error
+    // Error & Server state
     error,
     clearError,
+    isServerWarming,
+    retryLoad,
 
     // Today date
     today,

@@ -36,6 +36,8 @@ interface DashboardProps {
   // Error
   error: string | null;
   clearError: () => void;
+  isServerWarming: boolean;
+  retryLoad: () => void;
 
   // Today date
   today: string;

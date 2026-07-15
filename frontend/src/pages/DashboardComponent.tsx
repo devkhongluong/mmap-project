@@ -5,6 +5,7 @@ import type { NoteHistory } from '@/api/notes';
 import { ImportMapModal } from '@/components/ImportMapModal';
 import { reviewNoteWithAi } from '@/api/ai';
 import type { UserProfile } from '@/api/profile';
+import confetti from 'canvas-confetti';
 
 // =====================================================================
 // PROPS INTERFACE — Nhận dữ liệu thực từ useDashboard() hook
@@ -54,6 +55,33 @@ interface DashboardProps {
 // =====================================================================
 // POMODORO HOOK
 // =====================================================================
+const fireConfetti = () => {
+  const duration = 3000;
+  const end = Date.now() + duration;
+
+  const frame = () => {
+    confetti({
+      particleCount: 5,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0 },
+      colors: ['#6366F1', '#8B5CF6', '#10B981', '#F59E0B']
+    });
+    confetti({
+      particleCount: 5,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1 },
+      colors: ['#6366F1', '#8B5CF6', '#10B981', '#F59E0B']
+    });
+
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  };
+  frame();
+};
+
 function usePomodoro() {
   const [workMin, setWorkMin] = useState(25);
   const [breakMin, setBreakMin] = useState(5);
@@ -103,6 +131,7 @@ function usePomodoro() {
         if (phase === 'work') {
           setSessions(s => s + 1);
           setPhase('break');
+          fireConfetti();
           return breakSec;
         } else {
           setPhase('work');
@@ -116,7 +145,7 @@ function usePomodoro() {
   const fmt = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  return { phase, timeLeft, isRunning, sessions, progress, toggle, reset, fmt, workMin, breakMin, changeWorkMin, changeBreakMin };
+  return { phase, timeLeft, isRunning, sessions, progress, toggle, reset, fmt, workMin, breakMin, changeWorkMin, changeBreakMin, setWorkMin };
 }
 
 // =====================================================================
@@ -309,6 +338,42 @@ export default function DashboardComponent(props: DashboardProps) {
 
   // ---------- Pomodoro ----------
   const pomo = usePomodoro();
+
+  // ── Tab Switch Catcher & Zen Mode ──
+  const [tabWarning, setTabWarning] = useState<string | null>(null);
+  const hiddenTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (pomo.isRunning && pomo.phase === 'work') {
+          hiddenTimeRef.current = Date.now();
+        }
+      } else {
+        if (hiddenTimeRef.current && pomo.isRunning && pomo.phase === 'work') {
+          const absentSeconds = Math.floor((Date.now() - hiddenTimeRef.current) / 1000);
+          if (absentSeconds > 5) {
+            setTabWarning(`Đừng lơ đãng nhé, bạn vừa rời đi ${absentSeconds} giây!`);
+            setTimeout(() => setTabWarning(null), 5000);
+          }
+        }
+        hiddenTimeRef.current = null;
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [pomo.isRunning, pomo.phase]);
+
+  const isZenMode = pomo.isRunning && pomo.phase === 'work';
+  const zenClass = isZenMode ? 'opacity-20 blur-[2px] pointer-events-none transition-all duration-700' : 'transition-all duration-700';
+  const firstUndoneTodo = todos.find(t => !t.done);
+
+  const handleToggleTodo = (id: number) => {
+    const t = todos.find(x => x.id === id);
+    if (t && !t.done) fireConfetti();
+    toggleTodo(id);
+  };
+
   const RING_R = 38;
   const RING_C = 2 * Math.PI * RING_R;
   const ringOffset = RING_C - (pomo.progress / 100) * RING_C;
@@ -565,7 +630,7 @@ export default function DashboardComponent(props: DashboardProps) {
                     <input
                       type="checkbox"
                       checked={todo.done}
-                      onChange={() => toggleTodo(todo.id)}
+                      onChange={() => handleToggleTodo(todo.id)}
                       className="w-5 h-5 text-blue-600 rounded cursor-pointer accent-blue-500 flex-shrink-0"
                     />
                     <span className={`text-sm truncate ${todo.done ? 'text-gray-500 font-medium line-through' : 'text-gray-900 font-semibold'}`}>
@@ -965,7 +1030,7 @@ export default function DashboardComponent(props: DashboardProps) {
           {maps.length > 0 && (
             <>
               {/* ═══════ CỘT TRÁI ═══════ */}
-              <aside className={`lg:col-span-3 flex-col gap-5 ${mobileTab === 'notes' ? 'flex' : 'hidden lg:flex'}`}>
+              <aside className={`lg:col-span-3 flex-col gap-5 ${zenClass} ${mobileTab === 'notes' ? 'flex' : 'hidden lg:flex'}`}>
 
                 {/* Note Widget */}
                 <div
@@ -1135,6 +1200,23 @@ export default function DashboardComponent(props: DashboardProps) {
                       </button>
                     </div>
                   </div>
+
+                  {/* Smart Suggestion */}
+                  {!isZenMode && firstUndoneTodo && (
+                    <div className="mt-4 p-3 bg-white/40 border border-indigo-100 rounded-xl text-center fade-in">
+                      <p className="text-sm text-gray-700 mb-2">Gợi ý việc tiếp: <strong className="text-indigo-600">{firstUndoneTodo.taskContent}</strong></p>
+                      <button
+                        onClick={() => {
+                          pomo.setWorkMin(5);
+                          pomo.toggle();
+                        }}
+                        className="px-4 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all"
+                      >
+                        Học thử 5 phút!
+                      </button>
+                    </div>
+                  )}
+
                 </div>
 
                 {/* ── Checklist Card ── */}
@@ -1249,7 +1331,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </section>
 
               {/* ═══════ CỘT PHẢI ═══════ */}
-              <aside className={`lg:col-span-3 flex-col gap-5 ${mobileTab === 'tools' ? 'flex' : 'hidden lg:flex'}`}>
+              <aside className={`lg:col-span-3 flex-col gap-5 ${zenClass} ${mobileTab === 'tools' ? 'flex' : 'hidden lg:flex'}`}>
                 <div
                   onClick={() => setActiveModal('tree_map')}
                   className="bg-white/60 backdrop-blur-[100px] rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
@@ -1411,6 +1493,17 @@ export default function DashboardComponent(props: DashboardProps) {
               <div className="p-6 sm:p-8 flex-grow overflow-y-auto">
                 {renderModal()}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab Warning Overlay */}
+        {tabWarning && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white px-8 py-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-3xl">👀</div>
+              <h3 className="text-xl font-bold text-gray-800">Cảnh báo xao nhãng!</h3>
+              <p className="text-gray-600 text-center font-medium">{tabWarning}</p>
             </div>
           </div>
         )}

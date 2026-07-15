@@ -1,0 +1,30 @@
+Với ý tưởng "lưu việc cần làm trong tháng + thông báo mỗi khi vào web" — nên thiết kế thế nào để thực sự hiệu quả tâm lý
+Nếu chỉ làm đúng như mô tả (một danh sách việc trong tháng, hiện thông báo khi mở web), nó sẽ nhanh chóng bị lờ đi — giống hệt cách người ta tắt thông báo điện thoại theo phản xạ. Cần thêm vài lớp để nó "chạm" được vào não né tránh:
+A. Không chỉ hiện thông báo — hiện đúng 1 việc, không phải cả danh sách
+Danh sách dài = quá tải lựa chọn = càng dễ né. Khi vào web, chỉ hiện "Việc tiếp theo bạn nên làm hôm nay" (rút ra từ list tháng, ưu tiên theo deadline gần nhất), kèm nút "Bắt đầu ngay" dẫn thẳng vào action, không phải quay lại xem cả list.
+B. Chia nhỏ việc "trọng đại" thành micro-step khi lưu
+Khi user nhập 1 việc lớn trong tháng (vd "Hoàn thành đồ án"), hỏi thêm 1 câu: "Bước nhỏ đầu tiên là gì?" — lưu kèm. Thông báo sẽ show bước nhỏ đó, không show cả việc lớn (giảm task aversion).
+C. Cơ chế "Nếu né tránh 3 lần thì..." (implementation intention)
+Cho user tự đặt trước rule dạng "nếu tôi hoãn việc này quá 3 lần thì web sẽ..." (vd: khóa Pomodoro cho việc khác, đổi màu cảnh báo đỏ, hạ % tiến độ hiển thị). Não trì hoãn thường phản ứng tốt hơn với luật do chính mình đặt trước hơn là bị nhắc nhở đơn thuần — vì nó không cảm thấy bị áp đặt từ bên ngoài.
+D. Gắn việc tháng vào cùng 1 hệ sinh thái với Roadmap + Pomodoro đã có
+Đừng làm nó thành 1 module tách biệt. Khi bấm "Bắt đầu ngay" ở thông báo việc tháng → tự động mở Pomodoro cho việc đó luôn. Giảm số bước = giảm né tránh.
+E. Theo dõi streak né tránh, không chỉ streak hoàn thành
+Thay vì chỉ khoe "bạn đã học 5 ngày liên tiếp", hãy nhẹ nhàng chỉ ra pattern né tránh: "Việc này bạn đã hoãn 4 lần rồi — có phải nó đang quá to?" → gợi ý chia nhỏ lại. Đây là điểm khác biệt với thông báo thông thường: nó phản chiếu lại hành vi thay vì chỉ nhắc.
+F. Thời điểm thông báo quan trọng hơn nội dung
+Đừng hiện tất cả cùng lúc lúc login (dễ bị lướt qua như quảng cáo). Cân nhắc: hiện sau khi user vừa hoàn thành 1 task nhỏ (lúc dopamine đang cao, dễ "được đà làm tiếp") thay vì ngay lúc vừa mở web (lúc ý chí còn thấp nhất trong ngày với người dễ mất tập trung).
+Về sự "lười" — thực ra thường không phải thiếu ý chí, mà là thiếu ma sát ngược (friction thấp cho việc sai, cao cho việc đúng)
+Não người có xu hướng chọn đường ít tốn năng lượng nhất tại đúng khoảnh khắc quyết định. Vấn đề không phải bạn "lười bẩm sinh", mà việc học đang tốn công khởi động hơn việc lướt điện thoại. Vài hướng xử lý:
+
+Giảm số bước để bắt đầu học xuống còn 1 cú click. Ngay khi mở web, nút to nhất, nổi nhất trên màn hình không nên là "Xem roadmap" hay "Xem tiến độ" — mà là "Bắt đầu ngay" dẫn thẳng vào việc nhỏ nhất tiếp theo, kèm Pomodoro tự chạy luôn. Không cho não cơ hội "để suy nghĩ đã".
+Cơ chế "2 phút đầu tiên miễn phí" — nhiều app chống lười (Duolingo, Forest...) dùng nguyên lý: cam kết ban đầu chỉ cần rất nhỏ (2-5 phút), vì não thường ngại bắt đầu chứ không ngại tiếp tục. Có thể thêm nút "Học thử 2 phút" thay vì bắt làm cả buổi.
+Phần thưởng tức thời, nhìn thấy được, nhỏ nhưng liên tục — bạn đã có % tiến độ, nhưng con số phần trăm là phần thưởng "lạnh" (abstract). Có thể thêm hiệu ứng trực quan ngay khi tick xong 1 task (animation, âm thanh nhỏ, hoặc pixel-art nền "sáng" dần lên theo tiến độ ngày — tận dụng luôn hệ pixel art bạn đang có).
+Giảm số lựa chọn. Lười thường tăng khi phải quyết định làm gì trước. App nên luôn tự đề xuất 1 việc duy nhất tiếp theo, không bắt user tự chọn giữa nhiều task.
+
+Về "mất tập trung" — đây là bài toán giữ trạng thái flow, không phải bài toán khởi động
+Mất tập trung thường xảy ra giữa chừng phiên học, không phải lúc bắt đầu. Vài cơ chế:
+
+Pomodoro nên "khóa" nhẹ trong lúc chạy — ví dụ hiện overlay mờ nếu tab bị chuyển đi quá X giây (không cấm, chỉ nhắc nhẹ khi quay lại: "Bạn vừa rời khỏi 45 giây — mọi thứ ổn chứ?"). Đừng làm phiền quá mức, chỉ cần tạo cảm giác "có ai đó để ý", đủ để giảm tần suất lơ đãng.
+Chia nhỏ thời lượng Pomodoro theo mức tập trung thực tế, không cố định 25 phút cho tất cả — cho phép chọn 10/15/25 phút, vì với người dễ mất tập trung, cam kết 25 phút ngay từ đầu đôi khi chính là rào cản khiến họ né tránh cả việc bấm Start.
+Ẩn bớt các phần không liên quan trong lúc học — ví dụ khi đang trong phiên Pomodoro, tạm ẩn to-do list, note history, các thứ gây xao nhãng trong chính app của bạn. Nghe ngược đời nhưng app càng nhiều tính năng càng dễ tự trở thành nguồn xao nhãng.
+"Body doubling" ảo — hiển thị con số kiểu "Đang có bao nhiêu người khác cũng đang học lúc này" (dù chỉ là số ảo hoặc lấy từ dữ liệu thật nếu có nhiều user) — cảm giác không học một mình giúp tăng tập trung đáng kể, đây là hiệu ứng tâm lý khá mạnh với người dễ xao nhãng.
+Ghi lại pattern mất tập trung theo giờ — vì bạn đã có hệ thống 6 mốc thời gian trong ngày (bình minh, sáng, trưa...), có thể tận dụng để gợi ý: "Bạn thường hoàn thành task tốt nhất vào buổi [X] — thử học lúc đó xem?" — biến dữ liệu thẩm mỹ sẵn có thành dữ liệu hành vi hữu ích.

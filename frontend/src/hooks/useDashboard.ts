@@ -43,31 +43,25 @@ export function useDashboard() {
   const [isServerWarming, setIsServerWarming] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
 
-  // ── Tải dữ liệu khi mount hoặc retry ──────────────────────────────────
-  const loadData = useCallback(async () => {
-    setIsServerWarming(false)
-    try {
-      await Promise.all([
-        fetchMaps(),
-        fetchTodos(today),
-        getProfile().then(setProfile).catch(() => {/* profile không critical */}),
-      ])
-    } catch {
-      // Nếu lỗi mạng (server cold-start), hiện trạng thái warming
-      setIsServerWarming(true)
-    }
-  }, [fetchMaps, fetchTodos, today]) // eslint-disable-line react-hooks/exhaustive-deps
-
+  // ── Tải dữ liệu ────────────────────────────────────────────────────────
   useEffect(() => {
-    loadData()
+    setIsServerWarming(false)
+
+    fetchMaps()
+    fetchTodos(today)
+    getProfile().then(setProfile).catch(() => {/* profile không critical */})
   }, [retryCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Nếu có error từ store (sau khi đã hết retry tự động) thì đánh dấu warming
+  // ── Khi có error → đây là lỗi kết nối → hiện màn hình warming ─────────
+  // (fetchMaps nuốt lỗi vào store, không re-throw → phải theo dõi error state)
   useEffect(() => {
-    if (error && (error.includes('kết nối') || error.includes('connect'))) {
+    if (error && maps.length === 0 && !isLoadingMaps) {
+      // Bất kỳ lỗi nào khi chưa có dữ liệu = server có vấn đề
       setIsServerWarming(true)
+    } else if (!error) {
+      setIsServerWarming(false)
     }
-  }, [error])
+  }, [error, maps.length, isLoadingMaps])
 
   // Retry thủ công
   const retryLoad = useCallback(() => {
@@ -108,7 +102,7 @@ export function useDashboard() {
     [createTodo, today]
   )
 
-  // Refresh todos cho ngày khác (calendar picker)
+  // Refresh todos cho ngày khác
   const handleFetchTodos = useCallback(
     (date: string) => fetchTodos(date),
     [fetchTodos]

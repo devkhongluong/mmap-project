@@ -200,7 +200,7 @@ export default function DashboardComponent(props: DashboardProps) {
     currentDay, isLoadingDay,
     todos, isLoadingTodos,
     noteHistory,
-    error, clearError,
+    error, clearError, retryLoad,
     switchMap, toggleChecklist, saveNote,
     fetchMaps, createTodo, toggleTodo, deleteTodo,
     fetchNoteHistory,
@@ -923,12 +923,18 @@ export default function DashboardComponent(props: DashboardProps) {
 
       {/* Error Banner */}
       {error && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-red-500 text-white px-5 py-3 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-3 fade-in">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-red-500 text-white px-5 py-3 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-3 fade-in max-w-lg">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="flex-shrink-0">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          {error}
-          <button onClick={clearError} className="ml-2 font-bold opacity-80 hover:opacity-100">✕</button>
+          <span className="flex-grow">{error}</span>
+          <button
+            onClick={() => { clearError(); retryLoad(); }}
+            className="flex-shrink-0 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-xs font-bold transition-all"
+          >
+            🔄 Thử lại
+          </button>
+          <button onClick={clearError} className="flex-shrink-0 font-bold opacity-80 hover:opacity-100">✕</button>
         </div>
       )}
 

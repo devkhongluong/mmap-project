@@ -35,6 +35,15 @@ export interface ChecklistItem {
   isChecked: boolean
 }
 
+export interface MaterialItem {
+  materialId: number
+  title: string
+  /** "text" | "link" | "youtube" */
+  contentType: string
+  content: string
+  displayOrder: number
+}
+
 export interface DayDetail {
   mapDayId: number
   dayIndex: number
@@ -46,6 +55,7 @@ export interface DayDetail {
   checkedCount: number
   allChecked: boolean
   dayCompleted: boolean
+  materials: MaterialItem[]
 }
 
 // ── API Functions ─────────────────────────────────────────────────────

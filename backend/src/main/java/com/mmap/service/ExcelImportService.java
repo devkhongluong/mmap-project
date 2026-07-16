@@ -41,17 +41,21 @@ import java.util.List;
 @Slf4j
 public class ExcelImportService {
 
-    private static final int COL_PHASE    = 0;
-    private static final int COL_WEEK     = 1;
-    private static final int COL_DAY_IDX  = 2;
-    private static final int COL_TITLE    = 3;
-    private static final int COL_CHECK_START = 4;  // Từ cột E trở đi
+    private static final int COL_PHASE       = 0;
+    private static final int COL_WEEK        = 1;
+    private static final int COL_DAY_IDX    = 2;
+    private static final int COL_TITLE      = 3;
+    private static final int COL_CHECK_START = 4;  // Từ cột E trở đi (checklists)
+    // 3 cột cuối (optional): material_title | material_type | material_content
+    // Vị trí được detect tự động qua header dòng đầu tiên
 
     private final LearningMapRepository    learningMapRepository;
     private final MapDayRepository         mapDayRepository;
     private final UserMapRepository        userMapRepository;
     private final UserDayProgressRepository dayProgressRepository;
     private final UserRepository           userRepository;
+    private final MapDayMaterialRepository materialRepository;
+
 
     /**
      * Import file Excel và tạo lộ trình mới cho user.
@@ -98,7 +102,7 @@ public class ExcelImportService {
                 .build();
         learningMapRepository.save(map);
 
-        // Tạo MapDays + Checklists
+        // Tạo MapDays + Checklists + Materials
         for (MapDayData row : rows) {
             MapDay day = MapDay.builder()
                     .map(map)
@@ -120,7 +124,24 @@ public class ExcelImportService {
                 }
             }
             day.setChecklists(checklists);
+            day.setMaterials(new ArrayList<>());
             mapDayRepository.save(day);
+
+            // Lưu materials nếu có
+            for (int i = 0; i < row.materials.size(); i++) {
+                MaterialData mat = row.materials.get(i);
+                if (!mat.title.isBlank() && !mat.content.isBlank()) {
+                    String type = mat.contentType.isBlank() ? "link" : mat.contentType.trim().toLowerCase();
+                    if (!List.of("text", "link", "youtube").contains(type)) type = "link";
+                    materialRepository.save(MapDayMaterial.builder()
+                            .mapDay(day)
+                            .title(mat.title)
+                            .contentType(type)
+                            .content(mat.content)
+                            .displayOrder(i + 1)
+                            .build());
+                }
+            }
         }
 
         // Gán Map cho user (IN_PROGRESS)
@@ -160,6 +181,13 @@ public class ExcelImportService {
 
     // ── Parse Excel ────────────────────────────────────────────────────────
 
+    /**
+     * Cấu trúc Excel hỗ trợ:
+     * | Phase | Week | Day | Title | Check1 | Check2 | ... | material_title | material_type | material_content |
+     *
+     * 3 cột material ở cuối là OPTIONAL — phát hiện tự động qua header dòng đầu.
+     * File Excel cũ không có cột này vẫn import bình thường.
+     */
     private List<MapDayData> parseExcel(MultipartFile file) throws IOException {
         List<MapDayData> result = new ArrayList<>();
 
@@ -168,6 +196,22 @@ public class ExcelImportService {
             // Tìm sheet tên "Lộ trình" hoặc dùng sheet đầu tiên
             Sheet sheet = workbook.getSheet("Lộ trình");
             if (sheet == null) sheet = workbook.getSheetAt(0);
+
+            // Scan hàng đầu tiên để tìm vị trí cột material
+            int colMatTitle   = -1;
+            int colMatType    = -1;
+            int colMatContent = -1;
+            Row headerRow = sheet.getRow(0);
+            if (headerRow != null) {
+                for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+                    String h = getCellString(headerRow.getCell(c)).toLowerCase().replace(" ", "_");
+                    if (h.equals("material_title"))   { colMatTitle   = c; }
+                    if (h.equals("material_type"))    { colMatType    = c; }
+                    if (h.equals("material_content")) { colMatContent = c; }
+                }
+            }
+            final boolean hasMaterialCols = colMatTitle >= 0;
+            log.info("Excel material columns: title={} type={} content={}", colMatTitle, colMatType, colMatContent);
 
             for (Row row : sheet) {
                 // Bỏ qua hàng trống
@@ -190,15 +234,26 @@ public class ExcelImportService {
                     continue;
                 }
 
-                // Đọc checklists từ cột E trở đi
+                // Đọc checklists từ cột E đến trước cột material (hoặc đến hết)
                 List<String> checkpoints = new ArrayList<>();
-                int lastCol = row.getLastCellNum();
-                for (int col = COL_CHECK_START; col < lastCol; col++) {
+                int checkEnd = hasMaterialCols ? colMatTitle : row.getLastCellNum();
+                for (int col = COL_CHECK_START; col < checkEnd; col++) {
                     String cp = getCellString(row.getCell(col));
                     if (!cp.isBlank()) checkpoints.add(cp);
                 }
 
-                result.add(new MapDayData(phaseName, weekName, dayIndex, dayTitle, checkpoints));
+                // Đọc material nếu có cột
+                List<MaterialData> materials = new ArrayList<>();
+                if (hasMaterialCols) {
+                    String matTitle   = getCellString(row.getCell(colMatTitle));
+                    String matType    = colMatType    >= 0 ? getCellString(row.getCell(colMatType))    : "";
+                    String matContent = colMatContent >= 0 ? getCellString(row.getCell(colMatContent)) : "";
+                    if (!matTitle.isBlank()) {
+                        materials.add(new MaterialData(matTitle, matType, matContent));
+                    }
+                }
+
+                result.add(new MapDayData(phaseName, weekName, dayIndex, dayTitle, checkpoints, materials));
             }
         }
         // Sắp xếp theo dayIndex để đảm bảo thứ tự đúng
@@ -253,6 +308,14 @@ public class ExcelImportService {
             String weekName,
             int    dayIndex,
             String dayTitle,
-            List<String> checkpoints
+            List<String>       checkpoints,
+            List<MaterialData> materials
+    ) {}
+
+    /** DTO nội bộ cho 1 tài liệu học liệu trong Excel */
+    private record MaterialData(
+            String title,
+            String contentType,
+            String content
     ) {}
 }

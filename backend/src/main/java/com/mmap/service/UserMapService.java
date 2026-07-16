@@ -23,12 +23,13 @@ import java.util.List;
 @Slf4j
 public class UserMapService {
 
-    private final UserRepository              userRepository;
-    private final UserMapRepository           userMapRepository;
-    private final UserDayProgressRepository   dayProgressRepository;
+    private final UserRepository                 userRepository;
+    private final UserMapRepository              userMapRepository;
+    private final UserDayProgressRepository      dayProgressRepository;
     private final UserChecklistProgressRepository checklistProgressRepository;
-    private final MapDayRepository            mapDayRepository;
-    private final DailyNoteRepository         noteRepository;
+    private final MapDayRepository               mapDayRepository;
+    private final DailyNoteRepository            noteRepository;
+    private final MapDayMaterialRepository       materialRepository;
 
     // ── Lấy danh sách Maps ──────────────────────────────────────────────
 
@@ -163,6 +164,19 @@ public class UserMapService {
         int checkedCount = (int) items.stream().filter(ChecklistItemResponse::isChecked).count();
         boolean dayCompleted = progress.getStatus() == DayProgressStatus.COMPLETED;
 
+        // Lấy tài liệu lý thuyết của ngày học
+        List<MaterialItemResponse> materials = materialRepository
+                .findByMapDayIdOrderByDisplayOrderAsc(day.getId())
+                .stream()
+                .map(m -> new MaterialItemResponse(
+                        m.getId(),
+                        m.getTitle(),
+                        m.getContentType(),
+                        m.getContent(),
+                        m.getDisplayOrder()
+                ))
+                .toList();
+
         return new DayDetailResponse(
                 day.getId(),
                 day.getDayIndex(),
@@ -173,7 +187,8 @@ public class UserMapService {
                 items.size(),
                 checkedCount,
                 checkedCount == items.size() && !items.isEmpty(),
-                dayCompleted
+                dayCompleted,
+                materials
         );
     }
 

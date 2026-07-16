@@ -45,4 +45,10 @@ public class MapDay {
                orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     private List<MapDayChecklist> checklists;
+
+    /** Tài liệu lý thuyết / link học liệu gắn với ngày này */
+    @OneToMany(mappedBy = "mapDay", cascade = CascadeType.ALL, fetch = FetchType.LAZY,
+               orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    private List<MapDayMaterial> materials;
 }

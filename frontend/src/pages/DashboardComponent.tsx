@@ -338,6 +338,20 @@ export default function DashboardComponent(props: DashboardProps) {
   // ---------- Tree Map zoom ----------
   const [treeZoom, setTreeZoom] = useState(1);
 
+  // ---------- Focus Tab (Lý thuyết / Bài học) ----------
+  const [focusTab, setFocusTab] = useState<'theory' | 'checklist'>('checklist');
+  const materials = currentDay?.materials ?? [];
+
+  // Auto-switch tab: nếu có tài liệu và ngày chưa complete → mặc định "theory"
+  useEffect(() => {
+    if (materials.length > 0 && !currentDay?.dayCompleted) {
+      setFocusTab('theory');
+    } else {
+      setFocusTab('checklist');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDay?.mapDayId]);
+
   // ---------- Pomodoro ----------
   const pomo = usePomodoro();
 
@@ -1262,7 +1276,135 @@ export default function DashboardComponent(props: DashboardProps) {
                     </span>
                   </div>
 
-                  {/* Checklist items */}
+                  {/* ── Tab Switcher ── */}
+                  <div className="flex gap-1 mb-4 bg-gray-100/80 rounded-xl p-1">
+                    <button
+                      onClick={() => setFocusTab('theory')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
+                        focusTab === 'theory'
+                          ? 'bg-white text-indigo-600 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <span>📚</span>
+                      Lý Thuyết
+                      {materials.length > 0 && (
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                          focusTab === 'theory' ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-200 text-gray-500'
+                        }`}>{materials.length}</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setFocusTab('checklist')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all ${
+                        focusTab === 'checklist'
+                          ? 'bg-white text-blue-600 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <span>✅</span>
+                      Bài Học
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${
+                        focusTab === 'checklist' ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'
+                      }`}>{checklists.length}</span>
+                    </button>
+                  </div>
+
+                  {/* ── Tab: Lý Thuyết ── */}
+                  {focusTab === 'theory' && (
+                    <div className="flex-grow flex flex-col gap-3 overflow-y-auto">
+                      {isLoadingDay ? (
+                        Array.from({ length: 2 }).map((_, i) => (
+                          <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+                        ))
+                      ) : materials.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                          <div className="text-4xl">📭</div>
+                          <p className="text-sm font-semibold text-gray-500">Chưa có tài liệu cho ngày này</p>
+                          <p className="text-xs text-gray-400 max-w-xs leading-relaxed">
+                            Người tạo lộ trình chưa thêm tài liệu tham khảo. Hãy tự tìm tài liệu hoặc chuyển sang tab <strong>Bài Học</strong> để bắt đầu.
+                          </p>
+                          <button
+                            onClick={() => setFocusTab('checklist')}
+                            className="mt-1 px-4 py-2 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            → Xem Bài Học
+                          </button>
+                        </div>
+                      ) : (
+                        materials.map((mat) => {
+                          const isLink = mat.contentType === 'link' || mat.contentType === 'youtube';
+                          const isYt   = mat.contentType === 'youtube';
+                          const icon   = isYt ? '▶️' : mat.contentType === 'link' ? '🔗' : '📄';
+                          let domain = '';
+                          if (isLink) {
+                            try { domain = new URL(mat.content).hostname.replace('www.', ''); } catch { domain = mat.content.slice(0, 30); }
+                          }
+                          // YouTube thumbnail
+                          let ytThumb = '';
+                          if (isYt) {
+                            const match = mat.content.match(/(?:youtu\.be\/|v=)([\w-]{11})/);
+                            if (match) ytThumb = `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg`;
+                          }
+                          return (
+                            <div
+                              key={mat.materialId}
+                              className={`rounded-xl border p-4 transition-all ${
+                                isLink
+                                  ? 'bg-white hover:border-indigo-200 hover:shadow-sm cursor-pointer border-gray-200'
+                                  : 'bg-amber-50/60 border-amber-100'
+                              }`}
+                              onClick={isLink ? () => window.open(mat.content, '_blank', 'noopener') : undefined}
+                            >
+                              {/* YouTube thumbnail */}
+                              {isYt && ytThumb && (
+                                <div className="relative mb-3 rounded-lg overflow-hidden">
+                                  <img src={ytThumb} alt={mat.title} className="w-full h-32 object-cover" />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-start gap-3">
+                                <span className="text-xl flex-shrink-0 mt-0.5">{icon}</span>
+                                <div className="min-w-0 flex-grow">
+                                  <p className={`text-sm font-bold leading-snug ${
+                                    isLink ? 'text-gray-800 group-hover:text-indigo-600' : 'text-amber-900'
+                                  }`}>{mat.title}</p>
+
+                                  {/* Link: hiện domain */}
+                                  {isLink && (
+                                    <p className="text-xs text-gray-400 mt-0.5 truncate">{domain}</p>
+                                  )}
+
+                                  {/* Text: hiện nội dung inline */}
+                                  {mat.contentType === 'text' && (
+                                    <p className="text-xs text-amber-800 mt-1.5 leading-relaxed line-clamp-4 whitespace-pre-line">{mat.content}</p>
+                                  )}
+                                </div>
+
+                                {/* Nút mở cho link/youtube */}
+                                {isLink && (
+                                  <div className="flex-shrink-0">
+                                    <span className="flex items-center gap-1 text-xs font-bold text-indigo-500 bg-indigo-50 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+                                      {isYt ? 'Xem video' : 'Mở tài liệu'}
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Tab: Bài Học (Checklist) ── */}
+                  {focusTab === 'checklist' && (
                   <div className="flex-grow flex flex-col gap-3 overflow-y-auto">
                     {isLoadingDay ? (
                       Array.from({ length: 4 }).map((_, i) => (
@@ -1304,6 +1446,7 @@ export default function DashboardComponent(props: DashboardProps) {
                       </label>
                     ))}
                   </div>
+                  )}
 
                   {/* Complete Button */}
                   {!dayDone ? (

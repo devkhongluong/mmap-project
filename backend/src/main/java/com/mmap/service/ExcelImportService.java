@@ -182,83 +182,110 @@ public class ExcelImportService {
     // ── Parse Excel ────────────────────────────────────────────────────────
 
     /**
-     * Cấu trúc Excel hỗ trợ:
-     * | Phase | Week | Day | Title | Check1 | Check2 | ... | material_title | material_type | material_content |
+     * Cấu trúc Excel hỗ trợ (2 format đều OK):
      *
-     * 3 cột material ở cuối là OPTIONAL — phát hiện tự động qua header dòng đầu.
-     * File Excel cũ không có cột này vẫn import bình thường.
+     * Format cũ — 1 hàng/ngày, checklist nằm ngang từ cột E:
+     * | Phase | Week | Day | Title | Check1 | Check2 | Check3 |
+     *
+     * Format mới — nhiều hàng/ngày, tài liệu ở hàng riêng:
+     * | Phase | Week | Day | Title | checklist_order | checklist_content | material_title | material_type | material_content |
+     * | ...   | ...  | 1   | ...   | 1               | Đọc docs...       | Video OOP      | youtube        | https://...      |
+     * | ...   | ...  | 1   | ...   | 2               | Viết code...      |                |                |                  |
+     * | ...   | ...  | 1   | ...   | 0               |                   | Docs chính thức| link           | https://...      |
+     *
+     * Các hàng cùng day_number được GOM NHÓM lại thành 1 MapDay duy nhất.
      */
     private List<MapDayData> parseExcel(MultipartFile file) throws IOException {
-        List<MapDayData> result = new ArrayList<>();
+        // LinkedHashMap để giữ thứ tự dayIndex khi insert
+        java.util.LinkedHashMap<Integer, MapDayData> dayMap = new java.util.LinkedHashMap<>();
 
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
 
-            // Tìm sheet tên "Lộ trình" hoặc dùng sheet đầu tiên
             Sheet sheet = workbook.getSheet("Lộ trình");
             if (sheet == null) sheet = workbook.getSheetAt(0);
 
-            // Scan hàng đầu tiên để tìm vị trí cột material
+            // ── Scan header dòng đầu để phát hiện format ──────────────────
             int colMatTitle   = -1;
             int colMatType    = -1;
             int colMatContent = -1;
+            // Format mới: có cột checklist_order & checklist_content riêng
+            int colCheckOrder   = -1;
+            int colCheckContent = -1;
+
             Row headerRow = sheet.getRow(0);
             if (headerRow != null) {
                 for (int c = 0; c < headerRow.getLastCellNum(); c++) {
                     String h = getCellString(headerRow.getCell(c)).toLowerCase().replace(" ", "_");
-                    if (h.equals("material_title"))   { colMatTitle   = c; }
-                    if (h.equals("material_type"))    { colMatType    = c; }
-                    if (h.equals("material_content")) { colMatContent = c; }
+                    switch (h) {
+                        case "material_title"    -> colMatTitle    = c;
+                        case "material_type"     -> colMatType     = c;
+                        case "material_content"  -> colMatContent  = c;
+                        case "checklist_order"   -> colCheckOrder   = c;
+                        case "checklist_content" -> colCheckContent = c;
+                    }
                 }
             }
-            final boolean hasMaterialCols = colMatTitle >= 0;
-            log.info("Excel material columns: title={} type={} content={}", colMatTitle, colMatType, colMatContent);
 
+            final boolean isNewFormat     = colCheckOrder >= 0 && colCheckContent >= 0;
+            final boolean hasMaterialCols = colMatTitle >= 0;
+            log.info("Excel format: {} | material cols: title={} type={} content={}",
+                    isNewFormat ? "NEW (vertical)" : "OLD (horizontal)",
+                    colMatTitle, colMatType, colMatContent);
+
+            // ── Đọc từng hàng ──────────────────────────────────────────────
             for (Row row : sheet) {
-                // Bỏ qua hàng trống
                 Cell phaseCell = row.getCell(COL_PHASE);
                 if (phaseCell == null || getCellString(phaseCell).isBlank()) continue;
 
-                // Phát hiện dòng header: cột C không phải số → bỏ qua
                 int dayIndex = getCellInt(row.getCell(COL_DAY_IDX));
-                if (dayIndex <= 0) {
-                    log.info("Bỏ qua hàng {} (header hoặc dayIndex không hợp lệ)", row.getRowNum() + 1);
-                    continue;
-                }
+                if (dayIndex <= 0) continue;   // header hoặc không hợp lệ
 
                 String phaseName = getCellString(row.getCell(COL_PHASE));
                 String weekName  = getCellString(row.getCell(COL_WEEK));
                 String dayTitle  = getCellString(row.getCell(COL_TITLE));
+                if (dayTitle.isBlank()) continue;
 
-                if (dayTitle.isBlank()) {
-                    log.warn("Bỏ qua hàng {} — title trống", row.getRowNum() + 1);
-                    continue;
+                // Lấy hoặc tạo mới MapDayData cho dayIndex này
+                MapDayData existing = dayMap.get(dayIndex);
+                if (existing == null) {
+                    existing = new MapDayData(phaseName, weekName, dayIndex, dayTitle,
+                                              new ArrayList<>(), new ArrayList<>());
+                    dayMap.put(dayIndex, existing);
                 }
 
-                // Đọc checklists từ cột E đến trước cột material (hoặc đến hết)
-                List<String> checkpoints = new ArrayList<>();
-                int checkEnd = hasMaterialCols ? colMatTitle : row.getLastCellNum();
-                for (int col = COL_CHECK_START; col < checkEnd; col++) {
-                    String cp = getCellString(row.getCell(col));
-                    if (!cp.isBlank()) checkpoints.add(cp);
+                // ── Đọc checklist ──────────────────────────────────────────
+                if (isNewFormat) {
+                    // Format mới: đọc từ cột checklist_content
+                    int checkOrder   = getCellInt(row.getCell(colCheckOrder));
+                    String checkText = getCellString(row.getCell(colCheckContent));
+                    if (checkOrder > 0 && !checkText.isBlank()) {
+                        existing.checkpoints().add(checkText);
+                    }
+                } else {
+                    // Format cũ: checklist nằm ngang từ cột E
+                    int checkEnd = hasMaterialCols ? colMatTitle : row.getLastCellNum();
+                    for (int col = COL_CHECK_START; col < checkEnd; col++) {
+                        String cp = getCellString(row.getCell(col));
+                        if (!cp.isBlank()) existing.checkpoints().add(cp);
+                    }
                 }
 
-                // Đọc material nếu có cột
-                List<MaterialData> materials = new ArrayList<>();
+                // ── Đọc material ───────────────────────────────────────────
                 if (hasMaterialCols) {
                     String matTitle   = getCellString(row.getCell(colMatTitle));
                     String matType    = colMatType    >= 0 ? getCellString(row.getCell(colMatType))    : "";
                     String matContent = colMatContent >= 0 ? getCellString(row.getCell(colMatContent)) : "";
                     if (!matTitle.isBlank()) {
-                        materials.add(new MaterialData(matTitle, matType, matContent));
+                        existing.materials().add(new MaterialData(matTitle, matType, matContent));
                     }
                 }
-
-                result.add(new MapDayData(phaseName, weekName, dayIndex, dayTitle, checkpoints, materials));
             }
         }
-        // Sắp xếp theo dayIndex để đảm bảo thứ tự đúng
-        result.sort(Comparator.comparingInt(MapDayData::dayIndex));
-        return result;
+
+        // Sắp xếp theo dayIndex rồi trả về
+        return dayMap.values().stream()
+                .sorted(Comparator.comparingInt(MapDayData::dayIndex))
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**

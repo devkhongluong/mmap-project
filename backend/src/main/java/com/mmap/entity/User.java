@@ -46,6 +46,11 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    /** Groq API key do user tự nhập — NULL = chưa cài, dùng server key */
+    @Column(name = "groq_api_key", length = 255)
+    private String groqApiKey;
+
+
     // ── Quan hệ ───────────────────────────────────────────────────────
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserMap> userMaps;

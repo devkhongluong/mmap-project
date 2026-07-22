@@ -5,6 +5,8 @@ import type { NoteHistory } from '@/api/notes';
 import { ImportMapModal } from '@/components/ImportMapModal';
 import { reviewNoteWithAi } from '@/api/ai';
 import type { UserProfile } from '@/api/profile';
+import { saveGroqKey, deleteGroqKey, getGroqKeyStatus } from '@/api/profile';
+import { useVoiceChat } from '@/hooks/useVoiceChat';
 import confetti from 'canvas-confetti';
 
 // =====================================================================
@@ -354,6 +356,49 @@ export default function DashboardComponent(props: DashboardProps) {
 
   // ---------- Pomodoro ----------
   const pomo = usePomodoro();
+
+  // ---------- Voice Chat AI ----------
+  const voiceCtx = {
+    dayTitle: currentDay?.dayTitle ?? '',
+    phaseName: currentDay?.phaseName ?? '',
+    checklistItems: (currentDay?.checklists ?? []).map((c: ChecklistItem) => c.checkpointContent),
+  };
+  const voice = useVoiceChat(voiceCtx);
+  const [showVoicePanel, setShowVoicePanel] = useState(false);
+
+  // ---------- Groq Key Settings ----------
+  const [showGroqSettings, setShowGroqSettings] = useState(false);
+  const [groqKeyInput, setGroqKeyInput] = useState('');
+  const [groqKeyMasked, setGroqKeyMasked] = useState('');
+  const [hasGroqKey, setHasGroqKey] = useState(false);
+  const [groqKeyMsg, setGroqKeyMsg] = useState('');
+
+  useEffect(() => {
+    getGroqKeyStatus().then(s => {
+      setHasGroqKey(s.hasKey);
+      setGroqKeyMasked(s.maskedKey);
+    }).catch(() => {});
+  }, []);
+
+  const handleSaveGroqKey = async () => {
+    if (!groqKeyInput.trim()) return;
+    try {
+      await saveGroqKey(groqKeyInput.trim());
+      setGroqKeyMsg('✅ Đã lưu key!');
+      setHasGroqKey(true);
+      setGroqKeyMasked(groqKeyInput.trim().substring(0, 8) + '••••••••••••••••');
+      setGroqKeyInput('');
+      setTimeout(() => setGroqKeyMsg(''), 3000);
+    } catch { setGroqKeyMsg('❌ Lưu thất bại. Thử lại.'); }
+  };
+
+  const handleDeleteGroqKey = async () => {
+    try {
+      await deleteGroqKey();
+      setHasGroqKey(false); setGroqKeyMasked(''); setGroqKeyMsg('🗑️ Đã xoá key.');
+      setTimeout(() => setGroqKeyMsg(''), 3000);
+    } catch { setGroqKeyMsg('❌ Xoá thất bại.'); }
+  };
 
   // ── Tab Switch Catcher & Zen Mode ──
   const [tabWarning, setTabWarning] = useState<string | null>(null);
@@ -1658,6 +1703,118 @@ export default function DashboardComponent(props: DashboardProps) {
             </div>
           </div>
         )}
+
+        {/* ── Voice Chat AI Floating UI ── */}
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+
+          {/* Groq Key Settings Panel */}
+          {showGroqSettings && (
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 shadow-2xl w-80 text-white">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-sm">⚙️ Cài đặt AI Key</h3>
+                <button onClick={() => setShowGroqSettings(false)} className="text-gray-400 hover:text-white text-lg leading-none">✕</button>
+              </div>
+              {hasGroqKey ? (
+                <div className="mb-3">
+                  <p className="text-xs text-gray-400 mb-1">Key hiện tại:</p>
+                  <p className="font-mono text-green-400 text-sm">{groqKeyMasked}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-amber-400 mb-3">⚠️ Chưa có key — đang dùng key mặc định của hệ thống (giới hạn chung).</p>
+              )}
+              <input
+                type="password"
+                placeholder="Nhập Groq API key (gsk_...)"
+                value={groqKeyInput}
+                onChange={e => setGroqKeyInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSaveGroqKey()}
+                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 mb-2"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveGroqKey}
+                  disabled={!groqKeyInput.trim()}
+                  className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                >Lưu key</button>
+                {hasGroqKey && (
+                  <button onClick={handleDeleteGroqKey} className="bg-red-800 hover:bg-red-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">Xoá</button>
+                )}
+              </div>
+              {groqKeyMsg && <p className="text-xs mt-2 text-center">{groqKeyMsg}</p>}
+              <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer"
+                className="block text-center text-xs text-violet-400 hover:text-violet-300 mt-3">
+                🔗 Lấy key miễn phí tại console.groq.com →
+              </a>
+            </div>
+          )}
+
+          {/* Chat Bubble — câu trả lời / trạng thái */}
+          {showVoicePanel && (voice.state !== 'idle' || voice.answer || voice.errorMsg) && (
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 shadow-2xl w-80 text-white">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  {voice.state === 'listening' && (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                      <span className="text-sm text-gray-300">Đang nghe...</span>
+                    </div>
+                  )}
+                  {voice.state === 'thinking' && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-yellow-400 animate-pulse">🤔 AI đang suy nghĩ...</span>
+                    </div>
+                  )}
+                  {voice.transcript && (
+                    <p className="text-xs text-gray-400 italic mb-2">🎤 "{voice.transcript}"</p>
+                  )}
+                  {voice.answer && (
+                    <div>
+                      <p className="text-sm text-white leading-relaxed">{voice.answer}</p>
+                      <button onClick={voice.speakAnswer}
+                        className="mt-2 text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1">
+                        {voice.isSpeaking ? '⏹ Dừng đọc' : '🔊 Đọc lại'}
+                      </button>
+                    </div>
+                  )}
+                  {voice.errorMsg && <p className="text-xs text-red-400">{voice.errorMsg}</p>}
+                </div>
+                <button onClick={voice.clearAnswer} className="text-gray-500 hover:text-gray-300 text-lg leading-none flex-shrink-0">✕</button>
+              </div>
+            </div>
+          )}
+
+          {/* Floating Buttons Row */}
+          <div className="flex items-center gap-2">
+            {/* Settings button */}
+            <button
+              onClick={() => setShowGroqSettings(v => !v)}
+              title="Cài đặt AI key"
+              className="w-10 h-10 rounded-full bg-gray-800 border border-gray-600 hover:bg-gray-700 text-gray-300 flex items-center justify-center shadow-lg transition-all"
+            >
+              ⚙️
+            </button>
+
+            {/* Mic button */}
+            <button
+              onClick={() => {
+                setShowVoicePanel(true);
+                if (voice.state === 'listening') voice.stopListening();
+                else voice.startListening();
+              }}
+              title={voice.state === 'listening' ? 'Dừng ghi âm' : 'Hỏi AI trợ lý'}
+              className={[
+                'w-14 h-14 rounded-full flex items-center justify-center shadow-2xl text-white text-2xl transition-all duration-300',
+                voice.state === 'listening'
+                  ? 'bg-red-500 shadow-red-500/50 scale-110 animate-pulse'
+                  : voice.state === 'thinking'
+                  ? 'bg-yellow-500 shadow-yellow-500/50 cursor-wait'
+                  : 'bg-violet-600 hover:bg-violet-500 hover:scale-105 shadow-violet-500/40',
+              ].join(' ')}
+            >
+              {voice.state === 'listening' ? '⏹' : voice.state === 'thinking' ? '💭' : '🎤'}
+            </button>
+          </div>
+        </div>
 
       </div>
     </>

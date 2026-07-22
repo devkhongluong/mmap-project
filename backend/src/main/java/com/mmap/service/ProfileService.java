@@ -31,10 +31,40 @@ public class ProfileService {
     private final UserDayProgressRepository dayProgressRepository;
     private final UserSkillRepository       userSkillRepository;
 
+    /** Lưu hoặc xoá Groq API key của user */
+    @Transactional
+    public void saveGroqKey(String email, String apiKey) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại"));
+        // Nếu gửi lên chuỗi rỗng → xoá key (dùng server key)
+        user.setGroqApiKey(apiKey == null || apiKey.isBlank() ? null : apiKey.trim());
+        userRepository.save(user);
+    }
+
+    /** Trả về trạng thái key: đã cài chưa + 8 ký tự đầu để hiển thị */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> getGroqKeyStatus(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại"));
+        String key = user.getGroqApiKey();
+        boolean hasKey = key != null && !key.isBlank();
+        String masked = hasKey ? key.substring(0, Math.min(8, key.length())) + "••••••••••••••••" : null;
+        return java.util.Map.of("hasKey", hasKey, "maskedKey", masked != null ? masked : "");
+    }
+
+    /** Lấy Groq API key thực để dùng trong service (không expose ra ngoài) */
+    @Transactional(readOnly = true)
+    public String getGroqApiKey(String email) {
+        return userRepository.findByEmail(email)
+                .map(User::getGroqApiKey)
+                .orElse(null);
+    }
+
     @Transactional(readOnly = true)
     public ProfileResponse getProfile(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại"));
+
 
         // Tổng số map đã đăng ký
         long totalMaps = userMapRepository.findByUserIdOrderByLastAccessedAtDesc(user.getId()).size();

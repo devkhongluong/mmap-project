@@ -47,15 +47,11 @@ public class GeminiService {
     /**
      * Trả lời câu hỏi giọng nói từ người học.
      * Dùng llama-3.1-8b-instant (nhanh hơn 70b ~3x, phù hợp real-time).
-     *
-     * @param question    Câu hỏi của user (đã chuyển từ voice → text)
-     * @param dayTitle    Tiêu đề ngày học hiện tại
-     * @param phaseName   Tên giai đoạn học
-     * @param checklistItems  Danh sách checklist của ngày
-     * @param userApiKey  Key riêng của user — null/blank → dùng server key
      */
     public String askVoiceQuestion(String question, String dayTitle, String phaseName,
-                                   java.util.List<String> checklistItems, String userApiKey) {
+                                   java.util.List<String> checklistItems,
+                                   java.util.List<java.util.Map<String, String>> materials,
+                                   String userApiKey) {
         String effectiveKey = (userApiKey != null && !userApiKey.isBlank()) ? userApiKey : apiKey;
         if (effectiveKey == null || effectiveKey.isBlank()) {
             return "Chưa cài Groq API key. Vào Cài đặt → nhập key miễn phí tại console.groq.com để dùng tính năng này.";
@@ -65,23 +61,43 @@ public class GeminiService {
                 ? "(không có checklist)"
                 : String.join("\n- ", checklistItems);
 
+        StringBuilder materialsBuilder = new StringBuilder();
+        if (materials != null && !materials.isEmpty()) {
+            for (java.util.Map<String, String> mat : materials) {
+                String title = mat.getOrDefault("title", "");
+                String type = mat.getOrDefault("contentType", "");
+                String content = mat.getOrDefault("content", "");
+                materialsBuilder.append("\n- ").append(title);
+                if ("link".equalsIgnoreCase(type) || "youtube".equalsIgnoreCase(type)) {
+                    materialsBuilder.append(" (Link: ").append(content).append(")");
+                } else if ("text".equalsIgnoreCase(type)) {
+                    materialsBuilder.append(":\n  ").append(content);
+                }
+            }
+        } else {
+            materialsBuilder.append(" (Không có tài liệu)");
+        }
+
         String systemPrompt = String.format(
-                "Bạn là trợ lý học tập thông minh của MMAP, thân thiện và ngắn gọn.\n" +
+                "Bạn là trợ lý học tập thông minh của MMAP, thân thiện, trả lời chính xác dựa trên bài học.\n" +
                 "Người dùng đang học: %s (Giai đoạn: %s)\n" +
-                "Nội dung hôm nay:\n- %s\n\n" +
+                "Nội dung checklist:\n- %s\n" +
+                "Tài liệu & Bài học & Link tham khảo hôm nay:%s\n\n" +
                 "Quy tắc trả lời:\n" +
-                "- Ngắn gọn 2-4 câu, đi thẳng vào trọng tâm\n" +
-                "- Tiếng Việt, thuật ngữ kỹ thuật giữ tiếng Anh\n" +
-                "- Nếu hỏi nghĩa từ tiếng Anh: giải thích + 1 ví dụ câu\n" +
-                "- Không chào hỏi, không lặp lại câu hỏi",
+                "- Dựa trực tiếp vào danh sách tài liệu, bài học, link tham khảo được cung cấp ở trên để hướng dẫn người dùng khi được hỏi về bài học/đề thi/tài liệu.\n" +
+                "- Trả lời ngắn gọn (2-4 câu), đi thẳng vào trọng tâm.\n" +
+                "- Tiếng Việt, giữ tiếng Anh cho thuật ngữ kỹ thuật.\n" +
+                "- Không chào hỏi, không lặp lại câu hỏi.",
                 dayTitle != null ? dayTitle : "Chưa xác định",
                 phaseName != null ? phaseName : "Chưa xác định",
-                checklistStr
+                checklistStr,
+                materialsBuilder.toString()
         );
 
         log.info("Voice chat: user asked '{}'", question.length() > 50 ? question.substring(0, 50) + "..." : question);
-        return callGroq("llama-3.1-8b-instant", systemPrompt, question, 250, effectiveKey);
+        return callGroq("llama-3.1-8b-instant", systemPrompt, question, 300, effectiveKey);
     }
+
 
     // ── Internal helper ──────────────────────────────────────────────────────
 

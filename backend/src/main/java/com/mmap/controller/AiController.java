@@ -56,10 +56,14 @@ public class AiController {
         @SuppressWarnings("unchecked")
         List<String> checklistItems = (List<String>) body.getOrDefault("checklistItems", List.of());
 
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> materials = (List<Map<String, String>>) body.getOrDefault("materials", List.of());
+
         // Lấy key riêng của user (nếu có), null → GeminiService dùng server key
         String userApiKey = profileService.getGroqApiKey(user.getUsername());
 
-        String answer = geminiService.askVoiceQuestion(question, dayTitle, phaseName, checklistItems, userApiKey);
+        String answer = geminiService.askVoiceQuestion(question, dayTitle, phaseName, checklistItems, materials, userApiKey);
         return ResponseEntity.ok(Map.of("answer", answer));
     }
 }
+

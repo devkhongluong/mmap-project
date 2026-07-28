@@ -362,8 +362,14 @@ export default function DashboardComponent(props: DashboardProps) {
     dayTitle: currentDay?.dayTitle ?? '',
     phaseName: currentDay?.phaseName ?? '',
     checklistItems: (currentDay?.checklists ?? []).map((c: ChecklistItem) => c.checkpointContent),
+    materials: (currentDay?.materials ?? []).map(m => ({
+      title: m.title,
+      contentType: m.contentType,
+      content: m.content,
+    })),
   };
   const voice = useVoiceChat(voiceCtx);
+
   const [showVoicePanel, setShowVoicePanel] = useState(false);
 
   // ---------- Groq Key Settings ----------

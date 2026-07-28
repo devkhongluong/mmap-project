@@ -1,10 +1,17 @@
-﻿import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { askVoiceQuestion } from "../api/ai"
+
+export interface MaterialContextItem {
+  title: string
+  contentType: string
+  content: string
+}
 
 interface VoiceChatContext {
   dayTitle: string
   phaseName: string
   checklistItems: string[]
+  materials?: MaterialContextItem[]
 }
 
 type VoiceState = "idle" | "listening" | "thinking" | "answered" | "error"
@@ -76,7 +83,13 @@ export function useVoiceChat(context: VoiceChatContext): UseVoiceChatReturn {
     setState("thinking")
     setErrorMsg("")
     try {
-      const result = await askVoiceQuestion(q, context.dayTitle, context.phaseName, context.checklistItems)
+      const result = await askVoiceQuestion(
+        q,
+        context.dayTitle,
+        context.phaseName,
+        context.checklistItems,
+        context.materials
+      )
       console.log("[VoiceChat] AI Response received:", result)
       setAnswer(result)
       setState("answered")
@@ -87,7 +100,8 @@ export function useVoiceChat(context: VoiceChatContext): UseVoiceChatReturn {
       setErrorMsg(err?.message || "Không thể kết nối AI. Kiểm tra mạng và thử lại.")
       setState("error")
     }
-  }, [context.dayTitle, context.phaseName, context.checklistItems, speakText])
+  }, [context.dayTitle, context.phaseName, context.checklistItems, context.materials, speakText])
+
 
   // ── Lấy toàn bộ text đã nói (gồm cả final & interim) ─────────────
   const getCombinedText = () => {

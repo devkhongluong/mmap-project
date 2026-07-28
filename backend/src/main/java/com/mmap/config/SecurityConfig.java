@@ -41,7 +41,9 @@ public class SecurityConfig {
     private static final String[] PUBLIC_ROUTES = {
             "/api/auth/**",             // Login, Register
             "/actuator/health",         // Health check cho Render.com
+            "/api/ping",                // Keep-alive ping — UptimeRobot + frontend
     };
+
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

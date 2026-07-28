@@ -400,7 +400,27 @@ export default function DashboardComponent(props: DashboardProps) {
     } catch { setGroqKeyMsg('❌ Xoá thất bại.'); }
   };
 
-  // ── Tab Switch Catcher & Zen Mode ──
+  // ── Ctrl+D keyboard shortcut — bật/tắt voice ──
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Bỏ qua khi đang gõ trong input / textarea / contenteditable
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
+
+      if (e.ctrlKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault(); // Ngăn Chrome bookmark trang
+        setShowVoicePanel(true);
+        if (voice.state === 'listening') {
+          voice.stopListening();
+        } else if (voice.state === 'idle' || voice.state === 'answered' || voice.state === 'error') {
+          voice.startListening();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [voice.state, voice.startListening, voice.stopListening]);
+
   const [tabWarning, setTabWarning] = useState<string | null>(null);
   const hiddenTimeRef = useRef<number | null>(null);
 
@@ -1704,114 +1724,211 @@ export default function DashboardComponent(props: DashboardProps) {
           </div>
         )}
 
-        {/* ── Voice Chat AI Floating UI ── */}
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        {/* ── Voice Chat AI — Ctrl+D shortcut + panel ── */}
 
-          {/* Groq Key Settings Panel */}
+        {/* Keyboard hint badge — luôn hiện góc dưới phải */}
+        <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2">
+
+          {/* ── Groq Key Settings Panel ── */}
           {showGroqSettings && (
-            <div className="bg-gray-900 border border-gray-700 rounded-2xl p-5 shadow-2xl w-80 text-white">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-2xl w-80 animate-in slide-in-from-bottom-2 fade-in duration-200">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-sm">⚙️ Cài đặt AI Key</h3>
-                <button onClick={() => setShowGroqSettings(false)} className="text-gray-400 hover:text-white text-lg leading-none">✕</button>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center text-sm">⚙️</div>
+                  <h3 className="font-bold text-sm text-gray-800">Cài đặt AI Key</h3>
+                </div>
+                <button
+                  onClick={() => setShowGroqSettings(false)}
+                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600 flex items-center justify-center text-xs transition-colors"
+                >✕</button>
               </div>
+
               {hasGroqKey ? (
-                <div className="mb-3">
-                  <p className="text-xs text-gray-400 mb-1">Key hiện tại:</p>
-                  <p className="font-mono text-green-400 text-sm">{groqKeyMasked}</p>
+                <div className="mb-3 bg-green-50 border border-green-100 rounded-xl px-3 py-2">
+                  <p className="text-xs text-green-600 font-medium mb-0.5">Key hiện tại</p>
+                  <p className="font-mono text-green-700 text-xs">{groqKeyMasked}</p>
                 </div>
               ) : (
-                <p className="text-xs text-amber-400 mb-3">⚠️ Chưa có key — đang dùng key mặc định của hệ thống (giới hạn chung).</p>
+                <div className="mb-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                  <p className="text-xs text-amber-700">⚠️ Chưa có key riêng — đang dùng key chung của hệ thống (giới hạn chung).</p>
+                </div>
               )}
+
               <input
                 type="password"
                 placeholder="Nhập Groq API key (gsk_...)"
                 value={groqKeyInput}
                 onChange={e => setGroqKeyInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSaveGroqKey()}
-                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 mb-2"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent mb-2 transition-all"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveGroqKey}
                   disabled={!groqKeyInput.trim()}
-                  className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-xs font-semibold py-2 rounded-lg transition-colors"
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white text-xs font-semibold py-2 rounded-xl transition-colors"
                 >Lưu key</button>
                 {hasGroqKey && (
-                  <button onClick={handleDeleteGroqKey} className="bg-red-800 hover:bg-red-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">Xoá</button>
+                  <button
+                    onClick={handleDeleteGroqKey}
+                    className="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold px-3 py-2 rounded-xl transition-colors border border-red-100"
+                  >Xoá</button>
                 )}
               </div>
-              {groqKeyMsg && <p className="text-xs mt-2 text-center">{groqKeyMsg}</p>}
-              <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer"
-                className="block text-center text-xs text-violet-400 hover:text-violet-300 mt-3">
+              {groqKeyMsg && (
+                <p className={`text-xs mt-2 text-center font-medium ${groqKeyMsg.startsWith('✅') ? 'text-green-600' : groqKeyMsg.startsWith('🗑️') ? 'text-gray-500' : 'text-red-500'}`}>
+                  {groqKeyMsg}
+                </p>
+              )}
+              <a
+                href="https://console.groq.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center text-xs text-violet-500 hover:text-violet-700 mt-3 font-medium"
+              >
                 🔗 Lấy key miễn phí tại console.groq.com →
               </a>
             </div>
           )}
 
-          {/* Chat Bubble — câu trả lời / trạng thái */}
+          {/* ── Chat Panel — câu hỏi & trả lời ── */}
           {showVoicePanel && (voice.state !== 'idle' || voice.answer || voice.errorMsg) && (
-            <div className="bg-gray-900 border border-gray-700 rounded-2xl p-4 shadow-2xl w-80 text-white">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl w-80 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
                   {voice.state === 'listening' && (
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                      <span className="text-sm text-gray-300">Đang nghe...</span>
-                    </div>
+                    <>
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                      </span>
+                      <span className="text-xs font-semibold text-gray-700">Đang nghe...</span>
+                    </>
                   )}
                   {voice.state === 'thinking' && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-yellow-400 animate-pulse">🤔 AI đang suy nghĩ...</span>
-                    </div>
+                    <>
+                      <svg className="animate-spin h-3 w-3 text-violet-500" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                      <span className="text-xs font-semibold text-gray-700">AI đang trả lời...</span>
+                    </>
                   )}
-                  {voice.transcript && (
-                    <p className="text-xs text-gray-400 italic mb-2">🎤 "{voice.transcript}"</p>
+                  {voice.state === 'answered' && (
+                    <>
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                      <span className="text-xs font-semibold text-gray-700">Trợ lý AI</span>
+                    </>
                   )}
-                  {voice.answer && (
-                    <div>
-                      <p className="text-sm text-white leading-relaxed">{voice.answer}</p>
-                      <button onClick={voice.speakAnswer}
-                        className="mt-2 text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1">
-                        {voice.isSpeaking ? '⏹ Dừng đọc' : '🔊 Đọc lại'}
-                      </button>
-                    </div>
+                  {voice.state === 'error' && (
+                    <>
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                      <span className="text-xs font-semibold text-gray-700">Lỗi</span>
+                    </>
                   )}
-                  {voice.errorMsg && <p className="text-xs text-red-400">{voice.errorMsg}</p>}
                 </div>
-                <button onClick={voice.clearAnswer} className="text-gray-500 hover:text-gray-300 text-lg leading-none flex-shrink-0">✕</button>
+                <button
+                  onClick={voice.clearAnswer}
+                  className="w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-400 hover:text-gray-600 flex items-center justify-center text-xs transition-colors"
+                >✕</button>
               </div>
+
+              {/* Body */}
+              <div className="px-4 py-3 space-y-2">
+                {voice.transcript && (
+                  <div className="flex items-start gap-2">
+                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">👤</div>
+                    <p className="text-xs text-gray-500 italic leading-relaxed">"{voice.transcript}"</p>
+                  </div>
+                )}
+                {voice.answer && (
+                  <div className="flex items-start gap-2">
+                    <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">✨</div>
+                    <p className="text-sm text-gray-800 leading-relaxed">{voice.answer}</p>
+                  </div>
+                )}
+                {voice.errorMsg && (
+                  <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                    <p className="text-xs text-red-600">{voice.errorMsg}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer actions */}
+              {voice.answer && (
+                <div className="px-4 pb-3 flex items-center gap-2">
+                  <button
+                    onClick={voice.speakAnswer}
+                    className="flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors"
+                  >
+                    {voice.isSpeaking
+                      ? <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>Dừng đọc</>
+                      : <><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>Đọc lại</>
+                    }
+                  </button>
+                  <span className="text-gray-200">|</span>
+                  <button
+                    onClick={() => { voice.clearAnswer(); setTimeout(() => { setShowVoicePanel(true); voice.startListening(); }, 100); }}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 font-medium transition-colors"
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                    Hỏi tiếp
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Floating Buttons Row */}
+          {/* ── Status badge + keyboard hint ── */}
           <div className="flex items-center gap-2">
-            {/* Settings button */}
+            {/* Settings gear */}
             <button
               onClick={() => setShowGroqSettings(v => !v)}
-              title="Cài đặt AI key"
-              className="w-10 h-10 rounded-full bg-gray-800 border border-gray-600 hover:bg-gray-700 text-gray-300 flex items-center justify-center shadow-lg transition-all"
-            >
-              ⚙️
-            </button>
-
-            {/* Mic button */}
-            <button
-              onClick={() => {
-                setShowVoicePanel(true);
-                if (voice.state === 'listening') voice.stopListening();
-                else voice.startListening();
-              }}
-              title={voice.state === 'listening' ? 'Dừng ghi âm' : 'Hỏi AI trợ lý'}
+              title="Cài đặt Groq API key"
               className={[
-                'w-14 h-14 rounded-full flex items-center justify-center shadow-2xl text-white text-2xl transition-all duration-300',
-                voice.state === 'listening'
-                  ? 'bg-red-500 shadow-red-500/50 scale-110 animate-pulse'
-                  : voice.state === 'thinking'
-                  ? 'bg-yellow-500 shadow-yellow-500/50 cursor-wait'
-                  : 'bg-violet-600 hover:bg-violet-500 hover:scale-105 shadow-violet-500/40',
+                'w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-md border transition-all duration-200',
+                showGroqSettings
+                  ? 'bg-violet-600 border-violet-500 text-white'
+                  : 'bg-white border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300',
               ].join(' ')}
             >
-              {voice.state === 'listening' ? '⏹' : voice.state === 'thinking' ? '💭' : '🎤'}
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
+
+            {/* Ctrl+D shortcut pill */}
+            <button
+              onClick={() => { setShowVoicePanel(true); voice.state === 'listening' ? voice.stopListening() : voice.startListening(); }}
+              title="Nhấn Ctrl+D để hỏi AI"
+              className={[
+                'flex items-center gap-2 px-3 h-8 rounded-full text-xs font-semibold shadow-md border transition-all duration-200 select-none',
+                voice.state === 'listening'
+                  ? 'bg-red-500 border-red-400 text-white shadow-red-200'
+                  : voice.state === 'thinking'
+                  ? 'bg-violet-500 border-violet-400 text-white shadow-violet-200 cursor-wait'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-600 hover:shadow-violet-100',
+              ].join(' ')}
+            >
+              {voice.state === 'listening' ? (
+                <>
+                  <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span></span>
+                  Đang nghe
+                </>
+              ) : voice.state === 'thinking' ? (
+                <>
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                  AI đang nghĩ
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                  <span className="text-gray-400 font-mono">Ctrl</span>
+                  <span className="text-gray-300">+</span>
+                  <span className="text-gray-400 font-mono">D</span>
+                </>
+              )}
             </button>
           </div>
         </div>

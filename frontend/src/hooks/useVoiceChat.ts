@@ -11,7 +11,7 @@ type VoiceState = "idle" | "listening" | "thinking" | "answered" | "error"
 
 interface UseVoiceChatReturn {
   state: VoiceState
-  /** Text final đã nhận được */
+  /** Text final + interim đã nhận được */
   transcript: string
   /** Text đang nhận realtime (chưa final) */
   interimTranscript: string
@@ -37,6 +37,8 @@ export function useVoiceChat(context: VoiceChatContext): UseVoiceChatReturn {
   const recognitionRef = useRef<any>(null)
   // Tích lũy toàn bộ text final trong khi giữ phím
   const finalTextRef = useRef("")
+  // Lưu interim text gần nhất (khi thả phím có thể text chưa kịp chuyển sang final)
+  const lastInterimRef = useRef("")
   // Tránh gửi 2 lần nếu onend fire sau stopAndSend
   const sentRef = useRef(false)
 
@@ -47,24 +49,54 @@ export function useVoiceChat(context: VoiceChatContext): UseVoiceChatReturn {
     }
   }, [])
 
+  // ── TTS helper ──────────────────────────────────────────────────────
+  const speakText = useCallback((text: string) => {
+    if (!window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    const voices = window.speechSynthesis.getVoices()
+    const viVoice = voices.find(v =>
+      v.lang.startsWith("vi") && (v.name.includes("Neural") || v.name.includes("HoaiMy") || v.name.includes("NamMinh"))
+    ) || voices.find(v => v.lang.startsWith("vi"))
+    if (viVoice) utterance.voice = viVoice
+    utterance.lang = "vi-VN"
+    utterance.rate = 1.0
+    utterance.pitch = 1.0
+    utterance.onstart = () => setIsSpeaking(true)
+    utterance.onend = () => setIsSpeaking(false)
+    utterance.onerror = () => setIsSpeaking(false)
+    window.speechSynthesis.speak(utterance)
+  }, [])
+
   // ── Gửi câu hỏi lên AI ─────────────────────────────────────────────
   const askAI = useCallback(async (question: string) => {
     const q = question.trim()
+    console.log("[VoiceChat] Sending to AI:", q)
     if (!q) { setState("idle"); return }
     setState("thinking")
+    setErrorMsg("")
     try {
       const result = await askVoiceQuestion(q, context.dayTitle, context.phaseName, context.checklistItems)
+      console.log("[VoiceChat] AI Response received:", result)
       setAnswer(result)
       setState("answered")
-    } catch {
-      setErrorMsg("Không thể kết nối AI. Kiểm tra mạng và thử lại.")
+      // Đọc to câu trả lời
+      speakText(result)
+    } catch (err: any) {
+      console.error("[VoiceChat] AI Error:", err)
+      setErrorMsg(err?.message || "Không thể kết nối AI. Kiểm tra mạng và thử lại.")
       setState("error")
     }
-  }, [context.dayTitle, context.phaseName, context.checklistItems])
+  }, [context.dayTitle, context.phaseName, context.checklistItems, speakText])
+
+  // ── Lấy toàn bộ text đã nói (gồm cả final & interim) ─────────────
+  const getCombinedText = () => {
+    const combined = (finalTextRef.current + " " + lastInterimRef.current).trim()
+    return combined
+  }
 
   // ── Bắt đầu ghi âm (giữ phím) ──────────────────────────────────────
   const startListening = useCallback(() => {
-    // Nếu đang nghe rồi thì không start lại
     if (recognitionRef.current) return
 
     const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -76,6 +108,7 @@ export function useVoiceChat(context: VoiceChatContext): UseVoiceChatReturn {
     window.speechSynthesis?.cancel()
     setIsSpeaking(false)
     finalTextRef.current = ""
+    lastInterimRef.current = ""
     sentRef.current = false
     setTranscript("")
     setInterimTranscript("")
@@ -84,33 +117,34 @@ export function useVoiceChat(context: VoiceChatContext): UseVoiceChatReturn {
 
     const recognition = new SpeechRecognitionAPI()
     recognition.lang = "vi-VN"
-    recognition.continuous = true       // ← Tiếp tục nghe không dừng giữa chừng
-    recognition.interimResults = true   // ← Hiện chữ realtime khi đang nói
+    recognition.continuous = true
+    recognition.interimResults = true
     recognition.maxAlternatives = 1
 
     recognition.onstart = () => {
+      console.log("[VoiceChat] Mic started listening...")
       setState("listening")
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = ""
-      // Duyệt tất cả kết quả từ resultIndex hiện tại
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i]
         if (result.isFinal) {
-          // Tích lũy vào final text
           finalTextRef.current += result[0].transcript + " "
-          setTranscript(finalTextRef.current.trim())
         } else {
           interim += result[0].transcript
         }
       }
+      lastInterimRef.current = interim
+      setTranscript(finalTextRef.current.trim())
       setInterimTranscript(interim)
     }
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.warn("[VoiceChat] Mic error:", event.error)
       if (event.error === "no-speech") {
-        // Không sao — user chưa nói gì
+        // không sao
       } else if (event.error === "not-allowed") {
         setErrorMsg("Chưa cấp quyền micro. Cho phép và thử lại.")
         setState("error")
@@ -121,13 +155,15 @@ export function useVoiceChat(context: VoiceChatContext): UseVoiceChatReturn {
     }
 
     recognition.onend = () => {
+      console.log("[VoiceChat] Mic ended.")
       recognitionRef.current = null
       setInterimTranscript("")
-      // Nếu chưa gửi (onend fire tự nhiên) → gửi luôn
+
       if (!sentRef.current) {
-        const text = finalTextRef.current.trim()
+        sentRef.current = true
+        const text = getCombinedText()
         if (text) {
-          sentRef.current = true
+          setTranscript(text)
           askAI(text)
         } else {
           setState("idle")
@@ -141,52 +177,34 @@ export function useVoiceChat(context: VoiceChatContext): UseVoiceChatReturn {
 
   // ── Dừng ghi âm + gửi AI (thả phím) ───────────────────────────────
   const stopAndSend = useCallback(() => {
-    if (!recognitionRef.current) return
+    if (!recognitionRef.current && !finalTextRef.current && !lastInterimRef.current) return
 
-    const text = finalTextRef.current.trim()
+    const text = getCombinedText()
+    console.log("[VoiceChat] stopAndSend combined text:", text)
     sentRef.current = true
 
-    // Dừng recognition — onend sẽ fire nhưng sentRef = true nên không gửi lại
-    recognitionRef.current.stop()
-    recognitionRef.current = null
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop() } catch {}
+      recognitionRef.current = null
+    }
     setInterimTranscript("")
 
     if (text) {
       setTranscript(text)
       askAI(text)
     } else {
-      // User giữ phím nhưng không nói gì
       setState("idle")
     }
   }, [askAI])
 
-  // ── TTS ─────────────────────────────────────────────────────────────
-  const speakText = (text: string) => {
-    if (!window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    // Ưu tiên giọng neural tiếng Việt nếu có (Edge)
-    const voices = window.speechSynthesis.getVoices()
-    const viVoice = voices.find(v =>
-      v.lang.startsWith("vi") && (v.name.includes("Neural") || v.name.includes("HoaiMy") || v.name.includes("NamMinh"))
-    ) || voices.find(v => v.lang.startsWith("vi"))
-    if (viVoice) utterance.voice = viVoice
-    utterance.lang = "vi-VN"
-    utterance.rate = 1.0
-    utterance.pitch = 1.0
-    utterance.onstart = () => setIsSpeaking(true)
-    utterance.onend = () => setIsSpeaking(false)
-    utterance.onerror = () => setIsSpeaking(false)
-    window.speechSynthesis.speak(utterance)
-  }
-
-  const speakAnswer = useCallback(() => { if (answer) speakText(answer) }, [answer])
+  const speakAnswer = useCallback(() => { if (answer) speakText(answer) }, [answer, speakText])
 
   const clearAnswer = useCallback(() => {
-    recognitionRef.current?.abort()
+    try { recognitionRef.current?.abort() } catch {}
     recognitionRef.current = null
     window.speechSynthesis?.cancel()
     finalTextRef.current = ""
+    lastInterimRef.current = ""
     sentRef.current = false
     setIsSpeaking(false)
     setTranscript("")

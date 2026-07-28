@@ -400,26 +400,43 @@ export default function DashboardComponent(props: DashboardProps) {
     } catch { setGroqKeyMsg('❌ Xoá thất bại.'); }
   };
 
-  // ── Ctrl+D keyboard shortcut — bật/tắt voice ──
+  // ── Ctrl+D push-to-talk: giữ → nghe, thả → gửi AI ──
+  const isHoldingRef = useRef(false);
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      // Bỏ qua khi đang gõ trong input / textarea / contenteditable
+    const isInputTarget = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
+      return tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable;
+    };
 
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isInputTarget(e)) return;
       if (e.ctrlKey && e.key.toLowerCase() === 'd') {
-        e.preventDefault(); // Ngăn Chrome bookmark trang
+        e.preventDefault();
+        if (e.repeat) return; // Bỏ qua auto-repeat khi giữ phím
+        if (isHoldingRef.current) return;
+        isHoldingRef.current = true;
         setShowVoicePanel(true);
-        if (voice.state === 'listening') {
-          voice.stopListening();
-        } else if (voice.state === 'idle' || voice.state === 'answered' || voice.state === 'error') {
-          voice.startListening();
-        }
+        voice.startListening();
       }
     };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'd' && isHoldingRef.current) {
+        e.preventDefault();
+        isHoldingRef.current = false;
+        voice.stopAndSend();
+      }
+    };
+
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [voice.state, voice.startListening, voice.stopListening]);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, [voice.startListening, voice.stopAndSend]);
+
+
 
   const [tabWarning, setTabWarning] = useState<string | null>(null);
   const hiddenTimeRef = useRef<number | null>(null);
@@ -1836,7 +1853,26 @@ export default function DashboardComponent(props: DashboardProps) {
 
               {/* Body */}
               <div className="px-4 py-3 space-y-2">
-                {voice.transcript && (
+                {/* Interim — chữ đang nhận realtime khi giữ phím */}
+                {voice.state === 'listening' && (
+                  <div className="flex items-start gap-2">
+                    <div className="w-6 h-6 rounded-full bg-red-50 border border-red-100 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">👤</div>
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-700 leading-relaxed">
+                        {voice.transcript || ''}
+                        <span className="text-gray-400">{voice.interimTranscript}</span>
+                        <span className="inline-flex gap-0.5 ml-1">
+                          <span className="w-1 h-1 bg-red-400 rounded-full animate-bounce" style={{animationDelay:'0ms'}}></span>
+                          <span className="w-1 h-1 bg-red-400 rounded-full animate-bounce" style={{animationDelay:'150ms'}}></span>
+                          <span className="w-1 h-1 bg-red-400 rounded-full animate-bounce" style={{animationDelay:'300ms'}}></span>
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">Thả <kbd className="bg-gray-100 border border-gray-200 rounded px-1 font-mono text-xs">Ctrl+D</kbd> để gửi</p>
+                    </div>
+                  </div>
+                )}
+                {/* Final transcript sau khi gửi */}
+                {voice.state !== 'listening' && voice.transcript && (
                   <div className="flex items-start gap-2">
                     <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">👤</div>
                     <p className="text-xs text-gray-500 italic leading-relaxed">"{voice.transcript}"</p>
@@ -1869,7 +1905,7 @@ export default function DashboardComponent(props: DashboardProps) {
                   </button>
                   <span className="text-gray-200">|</span>
                   <button
-                    onClick={() => { voice.clearAnswer(); setTimeout(() => { setShowVoicePanel(true); voice.startListening(); }, 100); }}
+                    onClick={() => { voice.clearAnswer(); }}
                     className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 font-medium transition-colors"
                   >
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
@@ -1900,8 +1936,15 @@ export default function DashboardComponent(props: DashboardProps) {
 
             {/* Ctrl+D shortcut pill */}
             <button
-              onClick={() => { setShowVoicePanel(true); voice.state === 'listening' ? voice.stopListening() : voice.startListening(); }}
-              title="Nhấn Ctrl+D để hỏi AI"
+              onClick={() => {
+                setShowVoicePanel(true);
+                if (voice.state === 'listening') {
+                  voice.stopAndSend();
+                } else if (voice.state === 'idle' || voice.state === 'answered' || voice.state === 'error') {
+                  voice.startListening();
+                }
+              }}
+              title="Giữ phím Ctrl+D để nói, thả ra để gửi"
               className={[
                 'flex items-center gap-2 px-3 h-8 rounded-full text-xs font-semibold shadow-md border transition-all duration-200 select-none',
                 voice.state === 'listening'
@@ -1914,7 +1957,7 @@ export default function DashboardComponent(props: DashboardProps) {
               {voice.state === 'listening' ? (
                 <>
                   <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span></span>
-                  Đang nghe
+                  Đang nghe (Thả Ctrl+D để gửi)
                 </>
               ) : voice.state === 'thinking' ? (
                 <>
@@ -1924,6 +1967,7 @@ export default function DashboardComponent(props: DashboardProps) {
               ) : (
                 <>
                   <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                  <span className="text-gray-500 font-medium">Giữ</span>
                   <span className="text-gray-400 font-mono">Ctrl</span>
                   <span className="text-gray-300">+</span>
                   <span className="text-gray-400 font-mono">D</span>

@@ -46,8 +46,8 @@ spring:
 # ══════════════════════════════════════════════════════════
 jwt:
   secret: ${JWT_SECRET:mySecretKeyForMmapApplicationThatIsAtLeast256BitsLong!!}
-  expiration-ms: 86400000           # 24 giờ (milliseconds)
-  refresh-expiration-ms: 604800000  # 7 ngày
+  expiration-ms: 2592000000           # 30 ngày (thay vì 24h) — người dùng không cần đăng nhập lại thường xuyên
+  refresh-expiration-ms: 2592000000  # 30 ngày
 
 # ══════════════════════════════════════════════════════════
 # GROQ AI (free, OpenAI-compatible — thay thế Gemini)

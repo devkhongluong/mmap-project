@@ -5,6 +5,7 @@ import type { UserMap, DayDetail, ChecklistItem } from '@/api/maps'
 import type { Todo } from '@/api/todos'
 import type { NoteHistory } from '@/api/notes'
 import { getProfile, type UserProfile } from '@/api/profile'
+import { apiClient } from '@/api/client'
 
 /**
  * useDashboard — hook trung tâm của Dashboard.
@@ -40,28 +41,49 @@ export function useDashboard() {
 
   const today = new Date().toISOString().split('T')[0]
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [isServerWarming, setIsServerWarming] = useState(false)
+  const [isServerWarming, setIsServerWarming] = useState(true) // Khởi đầu bằng true để đợi ping
   const [retryCount, setRetryCount] = useState(0)
 
-  // ── Tải dữ liệu ────────────────────────────────────────────────────────
+  // ── 1. Đánh thức máy chủ (Sequential Pre-flight Ping) ───────────────────
   useEffect(() => {
-    setIsServerWarming(false)
+    let active = true
+    setIsServerWarming(true)
+
+    // Gửi DUY NHẤT 1 request ping. Axios interceptor sẽ tự động retry nếu cold-start
+    apiClient.get('/api/ping')
+      .then(() => {
+        if (active) {
+          setIsServerWarming(false)
+        }
+      })
+      .catch((err) => {
+        console.error("[Dashboard] Wake-up ping failed:", err)
+        if (active) {
+          setIsServerWarming(true)
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [retryCount])
+
+  // ── 2. Chỉ tải dữ liệu khi máy chủ đã thức giấc hoàn toàn ────────────────
+  useEffect(() => {
+    if (isServerWarming) return
 
     fetchMaps()
     fetchTodos(today)
     getProfile().then(setProfile).catch(() => {/* profile không critical */})
-  }, [retryCount]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isServerWarming, retryCount]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Khi có error → đây là lỗi kết nối → hiện màn hình warming ─────────
-  // (fetchMaps nuốt lỗi vào store, không re-throw → phải theo dõi error state)
+  // ── 3. Lắng nghe error phát sinh sau khi đã load ────────────────────────
   useEffect(() => {
-    if (error && maps.length === 0 && !isLoadingMaps) {
-      // Bất kỳ lỗi nào khi chưa có dữ liệu = server có vấn đề
+    if (error && maps.length === 0 && !isLoadingMaps && !isServerWarming) {
       setIsServerWarming(true)
-    } else if (!error) {
-      setIsServerWarming(false)
     }
-  }, [error, maps.length, isLoadingMaps])
+  }, [error, maps.length, isLoadingMaps, isServerWarming])
+
 
   // Retry thủ công
   const retryLoad = useCallback(() => {

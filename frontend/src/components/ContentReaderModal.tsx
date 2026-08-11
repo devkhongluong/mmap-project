@@ -38,15 +38,15 @@ export function ContentReaderModal({ material, onClose }: ContentReaderModalProp
   let domain = '';
   if (isLink || isYt) {
     try {
-      domain = new URL(material.content).hostname.replace('www.', '');
+      domain = new URL(material.content || '').hostname.replace('www.', '');
     } catch {
       domain = 'Liên kết ngoài';
     }
   }
 
   // Xử lý YouTube URL để lấy link embed hợp lệ
-  let embedUrl = material.content;
-  if (isYt) {
+  let embedUrl = material.content || '';
+  if (isYt && material.content) {
     const match = material.content.match(/(?:youtu\.be\/|v=)([\w-]{11})/);
     if (match) {
       embedUrl = `https://www.youtube.com/embed/${match[1]}?autoplay=1`;
@@ -54,7 +54,7 @@ export function ContentReaderModal({ material, onClose }: ContentReaderModalProp
   }
 
   // Uớc tính thời gian đọc (giả sử 250 từ/phút)
-  const wordCount = isText ? material.content.split(/\s+/).length : 0;
+  const wordCount = isText && material.content ? material.content.split(/\s+/).length : 0;
   const readTime = Math.max(1, Math.ceil(wordCount / 250));
 
   // Tự động đóng nếu nhấn phím Escape
@@ -184,6 +184,7 @@ export function ContentReaderModal({ material, onClose }: ContentReaderModalProp
 // Hàm format markdown đơn giản (giữ nguyên whitespace-pre-line để tự động xuống dòng)
 // Parse các thẻ Header (##, ###) và In đậm (**)
 function formatMarkdown(text: string) {
+  if (!text) return null;
   // Tách dòng để xử lý
   const lines = text.split('\n');
   const rendered = lines.map((line, index) => {
@@ -207,6 +208,7 @@ function formatMarkdown(text: string) {
 }
 
 function parseInline(text: string) {
+  if (!text) return null;
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {

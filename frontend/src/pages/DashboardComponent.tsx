@@ -4,6 +4,7 @@ import type { Todo } from '@/api/todos';
 import type { NoteHistory } from '@/api/notes';
 import { ImportMapModal } from '@/components/ImportMapModal';
 import { reviewNoteWithAi } from '@/api/ai';
+import { ContentReaderModal } from '@/components/ContentReaderModal';
 import type { UserProfile } from '@/api/profile';
 import { saveGroqKey, deleteGroqKey, getGroqKeyStatus } from '@/api/profile';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
@@ -342,6 +343,7 @@ export default function DashboardComponent(props: DashboardProps) {
 
   // ---------- Focus Tab (Lý thuyết / Bài học) ----------
   const [focusTab, setFocusTab] = useState<'theory' | 'checklist'>('checklist');
+  const [readerMaterial, setReaderMaterial] = useState<any | null>(null);
   const materials = currentDay?.materials ?? [];
 
   // Auto-switch tab: nếu có tài liệu và ngày chưa complete → mặc định "theory"
@@ -469,7 +471,6 @@ export default function DashboardComponent(props: DashboardProps) {
   }, [pomo.isRunning, pomo.phase]);
 
   const isZenMode = pomo.isRunning && pomo.phase === 'work';
-  const zenClass = isZenMode ? 'opacity-20 blur-[2px] pointer-events-none transition-all duration-700' : 'transition-all duration-700';
   const firstUndoneTodo = todos.find(t => !t.done);
 
   const handleToggleTodo = (id: number) => {
@@ -1140,7 +1141,7 @@ export default function DashboardComponent(props: DashboardProps) {
           {maps.length > 0 && (
             <>
               {/* ═══════ CỘT TRÁI ═══════ */}
-              <aside className={`lg:col-span-3 flex-col gap-5 ${zenClass} ${mobileTab === 'notes' ? 'flex' : 'hidden lg:flex'}`}>
+              <aside className={`flex-col gap-5 transition-all duration-500 ${isZenMode ? 'hidden' : 'lg:col-span-3 lg:flex'} ${mobileTab === 'notes' ? 'flex' : 'hidden'}`}>
 
                 {/* Note Widget */}
                 <div
@@ -1219,7 +1220,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </aside>
 
               {/* ═══════ CỘT GIỮA ═══════ */}
-              <section className={`lg:col-span-6 flex-col gap-5 ${mobileTab === 'home' ? 'flex' : 'hidden lg:flex'}`}>
+              <section className={`flex-col gap-5 transition-all duration-500 ${isZenMode ? 'lg:col-span-8 lg:col-start-3 max-w-4xl mx-auto w-full' : 'lg:col-span-6'} ${mobileTab === 'home' ? 'flex' : 'hidden lg:flex'}`}>
 
                 {/* Clock */}
                 <div className="text-center py-1">
@@ -1437,12 +1438,8 @@ export default function DashboardComponent(props: DashboardProps) {
                           return (
                             <div
                               key={mat.materialId}
-                              className={`rounded-xl border p-4 transition-all ${
-                                isLink
-                                  ? 'bg-white hover:border-indigo-200 hover:shadow-sm cursor-pointer border-gray-200'
-                                  : 'bg-amber-50/60 border-amber-100'
-                              }`}
-                              onClick={isLink ? () => window.open(mat.content, '_blank', 'noopener') : undefined}
+                              className={`rounded-xl border p-4 transition-all bg-white hover:border-indigo-200 hover:shadow-sm cursor-pointer border-gray-200`}
+                              onClick={() => setReaderMaterial(mat)}
                             >
                               {/* YouTube thumbnail */}
                               {isYt && ytThumb && (
@@ -1459,30 +1456,26 @@ export default function DashboardComponent(props: DashboardProps) {
                               <div className="flex items-start gap-3">
                                 <span className="text-xl flex-shrink-0 mt-0.5">{icon}</span>
                                 <div className="min-w-0 flex-grow">
-                                  <p className={`text-sm font-bold leading-snug ${
-                                    isLink ? 'text-gray-800 group-hover:text-indigo-600' : 'text-amber-900'
-                                  }`}>{mat.title}</p>
+                                  <p className={`text-sm font-bold leading-snug text-gray-800 group-hover:text-indigo-600`}>{mat.title}</p>
 
                                   {/* Link: hiện domain */}
                                   {isLink && (
                                     <p className="text-xs text-gray-400 mt-0.5 truncate">{domain}</p>
                                   )}
 
-                                  {/* Text: hiện nội dung inline */}
+                                  {/* Text: preview ngắn gọn */}
                                   {mat.contentType === 'text' && (
-                                    <p className="text-xs text-amber-800 mt-1.5 leading-relaxed line-clamp-4 whitespace-pre-line">{mat.content}</p>
+                                    <p className="text-xs text-gray-500 mt-1.5 leading-relaxed line-clamp-2 whitespace-pre-line">{mat.content}</p>
                                   )}
                                 </div>
 
-                                {/* Nút mở cho link/youtube */}
-                                {isLink && (
-                                  <div className="flex-shrink-0">
-                                    <span className="flex items-center gap-1 text-xs font-bold text-indigo-500 bg-indigo-50 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
-                                      {isYt ? 'Xem video' : 'Mở tài liệu'}
-                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                                    </span>
-                                  </div>
-                                )}
+                                {/* Nút xem */}
+                                <div className="flex-shrink-0">
+                                  <span className="flex items-center gap-1 text-xs font-bold text-indigo-500 bg-indigo-50 px-2.5 py-1.5 rounded-lg whitespace-nowrap">
+                                    {isYt ? 'Xem video' : mat.contentType === 'text' ? 'Đọc lý thuyết' : 'Mở tài liệu'}
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           );
@@ -1570,7 +1563,7 @@ export default function DashboardComponent(props: DashboardProps) {
               </section>
 
               {/* ═══════ CỘT PHẢI ═══════ */}
-              <aside className={`lg:col-span-3 flex-col gap-5 ${zenClass} ${mobileTab === 'tools' ? 'flex' : 'hidden lg:flex'}`}>
+              <aside className={`flex-col gap-5 transition-all duration-500 ${isZenMode ? 'hidden' : 'lg:col-span-3 lg:flex'} ${mobileTab === 'tools' ? 'flex' : 'hidden'}`}>
                 <div
                   onClick={() => setActiveModal('tree_map')}
                   className="bg-white/60 backdrop-blur-[100px] rounded-2xl border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] shadow-sm p-5 flex flex-col cursor-pointer hover:shadow-md transition-all group relative overflow-hidden"
@@ -1708,6 +1701,12 @@ export default function DashboardComponent(props: DashboardProps) {
             onSuccess={() => fetchMaps()}
           />
         )}
+        
+        {/* Content Reader Modal */}
+        <ContentReaderModal 
+          material={readerMaterial} 
+          onClose={() => setReaderMaterial(null)} 
+        />
 
         {/* ── MODAL OVERLAY ──────────────────────────────────────────── */}
         {activeModal && (

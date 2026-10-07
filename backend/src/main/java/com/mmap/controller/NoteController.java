@@ -1,7 +1,7 @@
 package com.mmap.controller;
 
 import com.mmap.dto.request.SaveNoteRequest;
-import com.mmap.service.NoteHistoryResponse;
+import com.mmap.dto.response.NoteHistoryResponse;
 import com.mmap.service.NoteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

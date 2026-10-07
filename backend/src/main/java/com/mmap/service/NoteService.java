@@ -1,6 +1,7 @@
 package com.mmap.service;
 
 import com.mmap.dto.request.SaveNoteRequest;
+import com.mmap.dto.response.NoteHistoryResponse;
 import com.mmap.entity.*;
 import com.mmap.exception.BusinessException;
 import com.mmap.exception.ResourceNotFoundException;

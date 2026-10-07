@@ -1,4 +1,4 @@
-package com.mmap.service;
+package com.mmap.dto.response;
 
 import java.time.OffsetDateTime;
 import java.util.List;

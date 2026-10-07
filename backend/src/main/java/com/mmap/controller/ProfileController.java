@@ -1,6 +1,6 @@
 package com.mmap.controller;
 
-import com.mmap.service.ProfileResponse;
+import com.mmap.dto.response.ProfileResponse;
 import com.mmap.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

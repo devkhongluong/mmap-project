@@ -1,10 +1,9 @@
-package com.mmap.service;
+package com.mmap.dto.response;
 
 import java.time.OffsetDateTime;
 
 /**
- * Response DTO cho lịch sử Note — inline trong NoteService.
- * Tách ra file riêng để NoteController có thể import.
+ * Response DTO cho lịch sử Note của một map.
  */
 public record NoteHistoryResponse(
         Long           noteId,
